@@ -29,3 +29,33 @@ https://maps.app.goo.gl/T3ua72862GeWfFdJ6
 
 サクモバ 名古屋大須店
 https://maps.app.goo.gl/CgynoAtxgwVYP3UR9
+
+────────────────────
+## URLパラメータ（店舗・ブランド）
+
+リンクで店舗やブランドを指定できます。`?brand=` または `?store=` を付与。
+
+### ブランド（系列）
+
+| パラメータ | 表示 |
+|-----------|------|
+| `brand=amemoba` | アメモバ系列 |
+| `brand=sakumoba` | サクモバ系列 |
+
+例: `/?brand=amemoba`
+
+### 店舗（単体）
+
+| パラメータ | 店舗 |
+|-----------|------|
+| `store=ame-ueno` | アメモバ買取 東京上野本店 |
+| `store=ame-akiba` | アメモバ買取 秋葉原店 |
+| `store=ame-kashiwa` | アメモバ買取 柏店 |
+| `store=ame-nagoya` | アメモバ買取 名古屋大須店 |
+| `store=ame-shinjuku` | アメモバ買取 新宿東南口店 |
+| `store=ame-omiya` | アメモバ買取 大宮マルイ店 |
+| `store=saku-akiba` | サクモバ 東京秋葉原店 |
+| `store=saku-shinjuku` | サクモバ 新宿西口店 |
+| `store=saku-nagoya` | サクモバ 名古屋大須店 |
+
+例: `/?store=ame-ueno` （アメモバ系列の上野本店を選択）

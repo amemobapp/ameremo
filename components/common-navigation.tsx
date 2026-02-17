@@ -155,29 +155,23 @@ export default function CommonNavigation({
           {/* Store Filter Buttons */}
           <div className="mb-4">
             <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => setSelectedStores(['all'])}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
-                  selectedStores.includes('all') 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                全店舗
-              </button>
               {sortStoresByRegion(stores).map((store) => (
                 <button
                   key={store.id}
                   onClick={() => {
                     if (singleSelection) {
-                      // Single selection mode (dashboard): replace current selection
-                      setSelectedStores([store.id]);
+                      // Single selection: click active (selected) store → switch to all (全選択)
+                      if (selectedStores.includes(store.id)) {
+                        setSelectedStores(['all']);
+                      } else {
+                        setSelectedStores([store.id]);
+                      }
                     } else {
                       // Multiple selection mode (reviews): toggle behavior
                       if (selectedStores.includes('all')) {
                         setSelectedStores([store.id]);
                       } else if (selectedStores.includes(store.id)) {
-                        // If this is the last selected store, select 'all'
+                        // If this is the last selected store, select 'all' (全選択)
                         if (selectedStores.length === 1) {
                           setSelectedStores(['all']);
                         } else {

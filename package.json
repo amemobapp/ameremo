@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -15,7 +16,7 @@
     "fetch-reviews": "tsx scripts/fetch-reviews.ts"
   },
   "dependencies": {
-    "next": "14.2.35",
+    "next": "16.0.10",
     "react": "^18",
     "react-dom": "^18",
     "@prisma/client": "^5.7.1",
@@ -24,20 +25,24 @@
     "tailwindcss": "^3.3.6",
     "autoprefixer": "^10.0.1",
     "postcss": "^8",
+    "date-fns": "^2.30.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.2.0",
+    "puppeteer": "^24.15.0"
+  },
+  "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "typescript": "^5",
-    "date-fns": "^2.30.0",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.2.0",
-    "puppeteer": "^21.6.1"
-  },
-  "devDependencies": {
     "dotenv": "^16.3.1",
     "prisma": "^5.7.1",
     "tsx": "^4.6.2",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.35"
+    "eslint": "^9",
+    "eslint-config-next": "16.0.10"
+  },
+  "overrides": {
+    "rimraf": "^5.0.0",
+    "glob": "^11.0.0"
   }
 }

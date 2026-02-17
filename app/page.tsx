@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { formatDate, getRelativeTime, getStarRating, sortStoresByRegion } from '@/lib/utils';
+import {
+  STORE_SLUG_TO_NAME,
+  STORE_NAME_TO_SLUG,
+  BRAND_SLUG_TO_BRAND,
+  BRAND_TO_SLUG,
+  VALID_STORE_SLUGS,
+  VALID_BRAND_SLUGS
+} from '@/lib/store-slug';
 import CommonNavigation from '@/components/common-navigation';
 import {
   LineChart,
@@ -74,6 +83,8 @@ interface ReviewsResponse {
 type TabType = 'dashboard' | 'reviews';
 
 export default function HomePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   
   // Dashboard state
@@ -88,6 +99,8 @@ export default function HomePage() {
   const [selectedBrand, setSelectedBrand] = useState<'all' | 'AMEMOBA' | 'SAKUMOBA'>('all');
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStores, setSelectedStores] = useState<string[]>(['all']);
+  const [initialStoreSlug, setInitialStoreSlug] = useState<string | null>(null);
+  const hasReadUrlRef = useRef(false);
   const [dateRange, setDateRange] = useState({
     start: '',
     end: ''
@@ -105,6 +118,51 @@ export default function HomePage() {
   const [popupLoading, setPopupLoading] = useState(false);
   const [fetchFromGoogleLoading, setFetchFromGoogleLoading] = useState(false);
   const [fetchFromGoogleMessage, setFetchFromGoogleMessage] = useState<string | null>(null);
+
+  // Read URL params once on mount and set brand / pending store slug
+  useEffect(() => {
+    if (hasReadUrlRef.current) return;
+    hasReadUrlRef.current = true;
+    const storeSlug = searchParams.get('store');
+    const brandSlug = searchParams.get('brand');
+    if (brandSlug && VALID_BRAND_SLUGS.includes(brandSlug)) {
+      setSelectedBrand(BRAND_SLUG_TO_BRAND[brandSlug]);
+    } else if (storeSlug && VALID_STORE_SLUGS.includes(storeSlug)) {
+      setSelectedBrand(storeSlug.startsWith('ame-') ? 'AMEMOBA' : 'SAKUMOBA');
+    }
+    if (storeSlug && VALID_STORE_SLUGS.includes(storeSlug)) {
+      setInitialStoreSlug(storeSlug);
+    }
+  }, [searchParams]);
+
+  // Resolve initial store slug to store id once stores are loaded
+  useEffect(() => {
+    if (!initialStoreSlug || stores.length === 0) return;
+    const name = STORE_SLUG_TO_NAME[initialStoreSlug];
+    const store = stores.find((s) => s.name === name);
+    if (store) {
+      setSelectedStores([store.id]);
+    }
+    setInitialStoreSlug(null);
+  }, [initialStoreSlug, stores]);
+
+  // Sync selected brand/store to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (selectedBrand !== 'all') params.set('brand', BRAND_TO_SLUG[selectedBrand]);
+    if (initialStoreSlug) {
+      params.set('store', initialStoreSlug);
+    } else if (selectedStores.length === 1 && !selectedStores.includes('all')) {
+      const store = stores.find((s) => s.id === selectedStores[0]);
+      const slug = store && STORE_NAME_TO_SLUG[store.name];
+      if (slug) params.set('store', slug);
+    }
+    const qs = params.toString();
+    const url = qs ? `?${qs}` : window.location.pathname;
+    if (window.location.search !== (qs ? `?${qs}` : '')) {
+      router.replace(url, { scroll: false });
+    }
+  }, [selectedStores, selectedBrand, initialStoreSlug, stores, router]);
 
   // Set default date range (last 30 days) and fetch stores
   useEffect(() => {
@@ -303,6 +361,14 @@ export default function HomePage() {
     }
   };
 
+  /** 店舗名の表示用クラス（ブランド色・太字） */
+  const getStoreNameCellClass = (name: string, extra = '') => {
+    const base = 'font-bold ';
+    if (name.startsWith('アメモバ')) return base + 'text-green-600 ' + extra;
+    if (name.startsWith('サクモバ')) return base + 'text-orange-600 ' + extra;
+    return base + 'text-gray-900 ' + extra;
+  };
+
   const openReviewPopup = async (storeId: string, storeName: string, rating: number) => {
     setReviewPopup({ storeId, storeName, rating });
     setPopupLoading(true);
@@ -404,6 +470,9 @@ export default function HomePage() {
                       <p className="text-sm text-gray-600 mt-2">
                         期間内の総投稿件数
                       </p>
+                      <p className="text-xs text-amber-600 mt-1">
+                        ※取得は店舗・期間ごとに最新5件までです。
+                      </p>
                     </div>
 
                     <div className="bg-white rounded-lg shadow p-6">
@@ -419,190 +488,8 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Store Comparison */}
-                  <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      評価別
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              店舗
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐⭐⭐⭐</span>
-                              <br />
-                              <span className="text-xs">5</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐⭐⭐</span>
-                              <br />
-                              <span className="text-xs">4</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐⭐</span>
-                              <br />
-                              <span className="text-xs">3</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐</span>
-                              <br />
-                              <span className="text-xs">2</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐</span>
-                              <br />
-                              <span className="text-xs">1</span>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {(() => {
-                            const order = sortStoresByRegion([...data.stores]).map((s) => s.id);
-                            const orderedComparison = [...data.storeComparison].sort((a, b) => {
-                              const ai = order.indexOf(a.storeId);
-                              const bi = order.indexOf(b.storeId);
-                              return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-                            });
-                            const maxByRating: { [k: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-                            orderedComparison.forEach((store) => {
-                              ([5, 4, 3, 2, 1] as const).forEach((r) => {
-                                if (store.ratingCounts[r] > maxByRating[r]) maxByRating[r] = store.ratingCounts[r];
-                              });
-                            });
-                            const greenBg = (count: number, max: number) => {
-                              if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
-                              const t = Math.min(1, count / max);
-                              const r = Math.round(240 - t * 219);
-                              const g = Math.round(253 - t * 125);
-                              const b = Math.round(244 - t * 183);
-                              const bg = `rgb(${r},${g},${b})`;
-                              return {
-                                backgroundColor: bg,
-                                color: t >= 0.55 ? '#fff' : undefined
-                              };
-                            };
-                            return orderedComparison.map((store) => (
-                              <tr key={store.storeId} className="hover:bg-gray-50/80">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {store.storeName}
-                                </td>
-                                {([5, 4, 3, 2, 1] as const).map((rating) => {
-                                  const count = store.ratingCounts[rating];
-                                  const max = maxByRating[rating];
-                                  const style = greenBg(count, max);
-                                  return (
-                                    <td
-                                      key={rating}
-                                      className="px-6 py-4 whitespace-nowrap text-sm text-center cursor-pointer transition-colors"
-                                      style={style}
-                                      onClick={() => count > 0 && openReviewPopup(store.storeId, store.storeName, rating)}
-                                    >
-                                      {count.toLocaleString()}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ));
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Store by Period Table */}
-                  {data.storeByPeriod && data.storeByPeriod.periodKeys.length > 0 && (
-                    <div className="bg-white rounded-lg shadow p-6 mb-8">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                        期間別
-                      </h3>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200" style={{ width: 'max-content' }}>
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-10">
-                                店舗名
-                              </th>
-                              {data.storeByPeriod.periodKeys.map((key) => {
-                                const date = new Date(key);
-                                const label =
-                                  granularity === 'MONTH'
-                                    ? `${date.getMonth() + 1}月`
-                                    : `${date.getMonth() + 1}/${date.getDate()}`;
-                                return (
-                                  <th
-                                    key={key}
-                                    className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                                  >
-                                    {label}
-                                  </th>
-                                );
-                              })}
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {(() => {
-                              const order = sortStoresByRegion(
-                                data.storeByPeriod!.rows.map((r) => ({ id: r.storeId, name: r.storeName }))
-                              ).map((s) => s.id);
-                              const ordered = [...data.storeByPeriod!.rows].sort((a, b) => {
-                                const ai = order.indexOf(a.storeId);
-                                const bi = order.indexOf(b.storeId);
-                                return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-                              });
-                              const maxByPeriod: Record<string, number> = {};
-                              data.storeByPeriod!.periodKeys.forEach((key) => {
-                                let max = 0;
-                                ordered.forEach((row) => {
-                                  const v = row.counts[key] ?? 0;
-                                  if (v > max) max = v;
-                                });
-                                maxByPeriod[key] = max;
-                              });
-                              const greenBg = (count: number, max: number) => {
-                                if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
-                                const t = Math.min(1, count / max);
-                                const r = Math.round(240 - t * 219);
-                                const g = Math.round(253 - t * 125);
-                                const b = Math.round(244 - t * 183);
-                                const bg = `rgb(${r},${g},${b})`;
-                                return {
-                                  backgroundColor: bg,
-                                  color: t >= 0.55 ? '#fff' : undefined
-                                };
-                              };
-                              return ordered.map((row) => (
-                                <tr key={row.storeId} className="hover:bg-gray-50/80">
-                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-100">
-                                    {row.storeName}
-                                  </td>
-                                  {data.storeByPeriod!.periodKeys.map((key) => {
-                                    const count = row.counts[key] ?? 0;
-                                    const max = maxByPeriod[key] ?? 0;
-                                    const style = greenBg(count, max);
-                                    return (
-                                      <td
-                                        key={key}
-                                        className="px-3 py-3 whitespace-nowrap text-sm text-center transition-colors"
-                                        style={style}
-                                      >
-                                        {count.toLocaleString()}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              ));
-                            })()}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Time Series Chart */}
-                  <div className="bg-white rounded-lg shadow p-6">
+                  <div className="bg-white rounded-lg shadow p-6 mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
                       時系列推移
                     </h3>
@@ -671,6 +558,188 @@ export default function HomePage() {
                       <p>• 緑色の折れ線グラフ：平均星評価</p>
                     </div>
                   </div>
+
+                  {/* Store Comparison */}
+                  <div className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      評価別
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              店舗
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <span className="text-lg">⭐⭐⭐⭐⭐</span>
+                              <br />
+                              <span className="text-xs">5</span>
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <span className="text-lg">⭐⭐⭐⭐</span>
+                              <br />
+                              <span className="text-xs">4</span>
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <span className="text-lg">⭐⭐⭐</span>
+                              <br />
+                              <span className="text-xs">3</span>
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <span className="text-lg">⭐⭐</span>
+                              <br />
+                              <span className="text-xs">2</span>
+                            </th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <span className="text-lg">⭐</span>
+                              <br />
+                              <span className="text-xs">1</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {(() => {
+                            const order = sortStoresByRegion([...data.stores]).map((s) => s.id);
+                            const orderedComparison = [...data.storeComparison].sort((a, b) => {
+                              const ai = order.indexOf(a.storeId);
+                              const bi = order.indexOf(b.storeId);
+                              return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                            });
+                            const maxByRating: { [k: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+                            orderedComparison.forEach((store) => {
+                              ([5, 4, 3, 2, 1] as const).forEach((r) => {
+                                if (store.ratingCounts[r] > maxByRating[r]) maxByRating[r] = store.ratingCounts[r];
+                              });
+                            });
+                            const countBg = (count: number, max: number) => {
+                              if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
+                              const t = Math.min(1, count / max);
+                              const r = Math.round(240 - t * 203);
+                              const g = Math.round(253 - t * 154);
+                              const b = Math.round(244 - t * 9);
+                              const bg = `rgb(${r},${g},${b})`;
+                              return {
+                                backgroundColor: bg,
+                                color: t >= 0.5 ? '#fff' : undefined
+                              };
+                            };
+                            return orderedComparison.map((store) => (
+                              <tr key={store.storeId} className="hover:bg-gray-50/80">
+                                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getStoreNameCellClass(store.storeName)}`}>
+                                  {store.storeName}
+                                </td>
+                                {([5, 4, 3, 2, 1] as const).map((rating) => {
+                                  const count = store.ratingCounts[rating];
+                                  const max = maxByRating[rating];
+const style = countBg(count, max);
+                                    return (
+                                    <td
+                                      key={rating}
+                                      className="px-6 py-4 whitespace-nowrap text-sm text-center cursor-pointer transition-colors"
+                                      style={style}
+                                      onClick={() => count > 0 && openReviewPopup(store.storeId, store.storeName, rating)}
+                                    >
+                                      {count.toLocaleString()}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Store by Period Table */}
+                  {data.storeByPeriod && data.storeByPeriod.periodKeys.length > 0 && (
+                    <div className="bg-white rounded-lg shadow p-6 mb-8">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        期間別
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200" style={{ width: 'max-content' }}>
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-10">
+                                店舗名
+                              </th>
+                              {data.storeByPeriod.periodKeys.map((key) => {
+                                const date = new Date(key);
+                                const label =
+                                  granularity === 'MONTH'
+                                    ? `${date.getMonth() + 1}月`
+                                    : `${date.getMonth() + 1}/${date.getDate()}`;
+                                return (
+                                  <th
+                                    key={key}
+                                    className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                                  >
+                                    {label}
+                                  </th>
+                                );
+                              })}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {(() => {
+                              const order = sortStoresByRegion(
+                                data.storeByPeriod!.rows.map((r) => ({ id: r.storeId, name: r.storeName }))
+                              ).map((s) => s.id);
+                              const ordered = [...data.storeByPeriod!.rows].sort((a, b) => {
+                                const ai = order.indexOf(a.storeId);
+                                const bi = order.indexOf(b.storeId);
+                                return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                              });
+                              const maxByPeriod: Record<string, number> = {};
+                              data.storeByPeriod!.periodKeys.forEach((key) => {
+                                let max = 0;
+                                ordered.forEach((row) => {
+                                  const v = row.counts[key] ?? 0;
+                                  if (v > max) max = v;
+                                });
+                                maxByPeriod[key] = max;
+                              });
+                              const countBg = (count: number, max: number) => {
+                                if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
+                                const t = Math.min(1, count / max);
+                                const r = Math.round(240 - t * 203);
+                                const g = Math.round(253 - t * 154);
+                                const b = Math.round(244 - t * 9);
+                                const bg = `rgb(${r},${g},${b})`;
+                                return {
+                                  backgroundColor: bg,
+                                  color: t >= 0.5 ? '#fff' : undefined
+                                };
+                              };
+                              return ordered.map((row) => (
+                                <tr key={row.storeId} className="hover:bg-gray-50/80">
+                                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 bg-white z-10 border-r border-gray-100 ${getStoreNameCellClass(row.storeName)}`}>
+                                    {row.storeName}
+                                  </td>
+                                  {data.storeByPeriod!.periodKeys.map((key) => {
+                                    const count = row.counts[key] ?? 0;
+                                    const max = maxByPeriod[key] ?? 0;
+                                    const style = countBg(count, max);
+                                    return (
+                                      <td
+                                        key={key}
+                                        className="px-3 py-3 whitespace-nowrap text-sm text-center transition-colors"
+                                        style={style}
+                                      >
+                                        {count.toLocaleString()}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </>

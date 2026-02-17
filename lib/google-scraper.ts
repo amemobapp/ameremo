@@ -40,7 +40,7 @@ export class GoogleScraperService {
       const reviewsButton = await page.$('[data-value="Reviews"]');
       if (reviewsButton) {
         await reviewsButton.click();
-        await page.waitForTimeout(2000);
+        await new Promise((r) => setTimeout(r, 2000));
       }
       
       // Scroll to load more reviews
@@ -49,7 +49,7 @@ export class GoogleScraperService {
         await page.evaluate(() => {
           window.scrollTo(0, document.body.scrollHeight);
         });
-        await page.waitForTimeout(2000);
+        await new Promise((r) => setTimeout(r, 2000));
       }
       
       // Extract reviews
