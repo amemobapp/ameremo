@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { formatDate, getRelativeTime, getStarRating, sortStoresByRegion } from '@/lib/utils';
@@ -82,7 +82,7 @@ interface ReviewsResponse {
 
 type TabType = 'dashboard' | 'reviews';
 
-export default function HomePage() {
+function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -931,5 +931,13 @@ const style = countBg(count, max);
         </div>
       )}
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">読み込み中...</div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }
