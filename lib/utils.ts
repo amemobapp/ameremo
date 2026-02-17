@@ -29,34 +29,26 @@ export function getStarRating(rating: number): string {
   return '⭐'.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '⭐' : '');
 }
 
+/** ブランド順（アメモバ→サクモバ）、続けて地域順で店舗を並べる */
 export function sortStoresByRegion(stores: Array<{ name: string; id: string }>): Array<{ name: string; id: string }> {
-  // Define the order: Amemoba (Tokyo → Chiba → Nagoya), then Sakumoba
-  const regionOrder = [
-    'アメモバ買取 東京上野本店',
-    'アメモバ買取 秋葉原店',
-    'アメモバ買取 新宿東南口店',
-    'アメモバ買取 柏店',
-    'アメモバ買取 大宮マルイ店',
-    'アメモバ買取 名古屋大須店',
-    'サクモバ 東京秋葉原店',
-    'サクモバ 新宿西口店',
-    'サクモバ 名古屋大須店'
-  ];
+  const brandOrder = (name: string) => {
+    if (name.startsWith('アメモバ')) return 0;
+    if (name.startsWith('サクモバ')) return 1;
+    return 2;
+  };
+  const regionOrder = ['上野', '秋葉原', '新宿', '柏', '大宮', '名古屋'];
+  const getRegionIndex = (name: string) => {
+    const i = regionOrder.findIndex((r) => name.includes(r));
+    return i === -1 ? 99 : i;
+  };
 
-  return stores.sort((a, b) => {
-    const aIndex = regionOrder.indexOf(a.name);
-    const bIndex = regionOrder.indexOf(b.name);
-    
-    // If both stores are in our predefined order, use that
-    if (aIndex !== -1 && bIndex !== -1) {
-      return aIndex - bIndex;
-    }
-    
-    // If only one is in our order, put the known one first
-    if (aIndex !== -1) return -1;
-    if (bIndex !== -1) return 1;
-    
-    // If neither is in our order, sort alphabetically
+  return [...stores].sort((a, b) => {
+    const brandA = brandOrder(a.name);
+    const brandB = brandOrder(b.name);
+    if (brandA !== brandB) return brandA - brandB;
+    const regionA = getRegionIndex(a.name);
+    const regionB = getRegionIndex(b.name);
+    if (regionA !== regionB) return regionA - regionB;
     return a.name.localeCompare(b.name);
   });
 }

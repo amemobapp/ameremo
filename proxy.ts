@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const AUTH_COOKIE = 'ameyoko-auth';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const isLoggedIn = request.cookies.get(AUTH_COOKIE)?.value === '1';
   const isLoginPage = request.nextUrl.pathname === '/login';
 

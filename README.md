@@ -111,7 +111,10 @@ npm run dev
 5. **ビルドが進まない場合**  
    **Settings → Environment Variables** で `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD` を `1` に設定してください（Production / Preview に適用）。Puppeteer はローカルスクリプト用のため Vercel では Chromium 不要で、設定するとインストールが短時間で完了します。
 
-6. **初回デプロイ後**  
+6. **口コミの自動取得（1日1回）**  
+   **Settings → Environment Variables** で `CRON_SECRET` を追加し、16文字以上のランダムな文字列を設定してください（例: `openssl rand -hex 16` で生成）。Vercel Cron が毎日 **0:00 UTC（日本時間 9:00）** に `/api/cron/fetch-reviews` を呼び出し、口コミを自動取得します。未設定でも Cron は動きますが、URL を知っていれば誰でも実行できてしまうため、本番では必ず設定することを推奨します。
+
+7. **初回デプロイ後**  
    デプロイが完了したら、Vercel の **Settings → Environment Variables** で本番の `DATABASE_URL` をコピーし、ローカルの `.env.local` にも同じ値を入れてから、以下でマイグレーションを実行（本番 DB にテーブルを作成）：
    ```bash
    npm run db:push
@@ -122,15 +125,15 @@ npm run dev
 
 ## 使い方
 
-### 1. ログイン
+### 1. 口コミデータの取得
+
+- **自動**: Vercel にデプロイしている場合、**1日1回（0:00 UTC = 日本時間 9:00）** に口コミが自動で再取得されます。手動でクリックする必要はありません。
+- **手動**: 画面上の「口コミデータを再取得」ボタン、または `npm run fetch-reviews` でいつでも再取得できます。
+
+### 2. ログイン
 
 - 未ログインで `/` にアクセスすると `/login` にリダイレクトされます
 - `SITE_PASSWORD` で設定したパスワードを入力してログイン
-
-### 2. 口コミデータの取得
-
-- メインページのナビゲーション内「口コミデータを再取得」ボタンで取得（推奨）
-- または CLI: `npm run fetch-reviews`
 
 ### 3. ダッシュボードの確認
 
@@ -151,6 +154,7 @@ npm run dev
 │   │   ├── dashboard/           # ダッシュボード用データ取得（GET）
 │   │   ├── reviews/             # 口コミ一覧用データ取得（GET）
 │   │   ├── fetch-reviews/       # 口コミ再取得（POST）
+│   │   ├── cron/fetch-reviews/  # Cron用・口コミ自動取得（GET・1日1回）
 │   │   ├── place-reviews-url/   # 店舗のGoogle口コミタブURL取得（GET）
 │   │   └── review-url/          # 口コミ単体URL用（GET）
 │   ├── login/page.tsx           # ログインページ
@@ -163,6 +167,7 @@ npm run dev
 │   └── ui/button.tsx            # ボタンUI
 ├── lib/
 │   ├── prisma.ts                # Prismaクライアント
+│   ├── fetch-reviews.ts         # 口コミ取得ロジック（API・Cron共通）
 │   ├── google-places.ts         # Google Places API（口コミ取得）
 │   ├── google-scraper.ts        # Puppeteerスクレイパー（ローカル/将来用）
 │   ├── store-slug.ts            # 店舗・ブランドのスラッグ⇔表示名対応（URL共有用）
