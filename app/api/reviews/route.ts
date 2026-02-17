@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const storeIds = searchParams.get('storeIds')?.split(',').filter(Boolean);
+    let storeIds = searchParams.get('storeIds')?.split(',').filter(Boolean);
+    const brand = searchParams.get('brand'); // 'all' | 'AMEMOBA' | 'SAKUMOBA'
     const rating = searchParams.get('rating'); // 1-5 filter
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -12,6 +15,15 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = (page - 1) * limit;
+
+    // When storeIds is 'all' but brand is set, resolve store IDs by brand
+    if (brand && brand !== 'all' && (!storeIds || storeIds.length === 0 || storeIds.includes('all'))) {
+      const brandStores = await prisma.store.findMany({
+        where: { brand },
+        select: { id: true }
+      });
+      storeIds = brandStores.map((s) => s.id);
+    }
 
     // Build where clause
     const where: any = {};

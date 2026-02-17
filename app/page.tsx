@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { formatDate, getRelativeTime, getStarRating } from '@/lib/utils';
+import { formatDate, getRelativeTime, getStarRating, sortStoresByRegion } from '@/lib/utils';
 import CommonNavigation from '@/components/common-navigation';
 import {
   LineChart,
@@ -43,6 +43,10 @@ interface DashboardData {
       5: number;
     };
   }>;
+  storeByPeriod?: {
+    periodKeys: string[];
+    rows: Array<{ storeId: string; storeName: string; counts: Record<string, number> }>;
+  };
   stores: Store[];
 }
 
@@ -81,6 +85,7 @@ export default function HomePage() {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   
   // Common state
+  const [selectedBrand, setSelectedBrand] = useState<'all' | 'AMEMOBA' | 'SAKUMOBA'>('all');
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStores, setSelectedStores] = useState<string[]>(['all']);
   const [dateRange, setDateRange] = useState({
@@ -98,6 +103,8 @@ export default function HomePage() {
   } | null>(null);
   const [popupReviews, setPopupReviews] = useState<Review[]>([]);
   const [popupLoading, setPopupLoading] = useState(false);
+  const [fetchFromGoogleLoading, setFetchFromGoogleLoading] = useState(false);
+  const [fetchFromGoogleMessage, setFetchFromGoogleMessage] = useState<string | null>(null);
 
   // Set default date range (last 30 days) and fetch stores
   useEffect(() => {
@@ -149,10 +156,18 @@ export default function HomePage() {
     };
   }, [stores, selectedStores]);
 
-  // Fetch stores for navigation
+  // Refetch stores when brand changes
+  useEffect(() => {
+    fetchStores();
+  }, [selectedBrand]);
+
+  // Fetch stores for navigation (filtered by brand)
   const fetchStores = async () => {
     try {
-      const response = await fetch('/api/dashboard?storeIds=all');
+      const params = new URLSearchParams();
+      params.set('storeIds', 'all');
+      if (selectedBrand !== 'all') params.set('brand', selectedBrand);
+      const response = await fetch(`/api/dashboard?${params}`);
       const result = await response.json();
       if (result.stores) {
         setStores(result.stores);
@@ -170,7 +185,7 @@ export default function HomePage() {
       if (selectedStores.length > 0 && !selectedStores.includes('all')) {
         params.append('storeIds', selectedStores.join(','));
       }
-      
+      if (selectedBrand !== 'all') params.append('brand', selectedBrand);
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
       params.append('granularity', granularity);
@@ -202,7 +217,7 @@ export default function HomePage() {
       if (selectedStores.length > 0 && !selectedStores.includes('all')) {
         params.append('storeIds', selectedStores.join(','));
       }
-      
+      if (selectedBrand !== 'all') params.append('brand', selectedBrand);
       if (dateRange.start) params.append('startDate', dateRange.start);
       if (dateRange.end) params.append('endDate', dateRange.end);
       params.append('sortBy', sortBy);
@@ -234,7 +249,7 @@ export default function HomePage() {
         fetchReviews(1);
       }
     }
-  }, [selectedStores, dateRange, granularity, sortBy, activeTab]);
+  }, [selectedStores, selectedBrand, dateRange, granularity, sortBy, activeTab]);
 
   // Fetch data when switching tabs
   useEffect(() => {
@@ -256,6 +271,35 @@ export default function HomePage() {
       fetchDashboardData();
     } else {
       fetchReviews(currentPage);
+    }
+  };
+
+  const handleFetchFromGoogle = async () => {
+    setFetchFromGoogleLoading(true);
+    setFetchFromGoogleMessage(null);
+    try {
+      const res = await fetch('/api/fetch-reviews', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setFetchFromGoogleMessage(data.error || '取得に失敗しました');
+        return;
+      }
+      const results = (data.results ?? []) as Array<{ newReviews?: number; totalReviews?: number; error?: string }>;
+      const totalNew = results.reduce((s, r) => s + (r.newReviews ?? 0), 0);
+      const totalFetched = results.reduce((s, r) => s + (r.totalReviews ?? 0), 0);
+      if (totalNew > 0 || totalFetched > 0) {
+        setFetchFromGoogleMessage(`取得完了: ${results.length}店舗から合計${totalFetched}件（新規${totalNew}件）`);
+      } else {
+        setFetchFromGoogleMessage('取得完了: 0件（APIキー・Places APIの有効化を確認してください）');
+      }
+      fetchDashboardData();
+      fetchReviews(1);
+      fetchStores();
+    } catch (e) {
+      setFetchFromGoogleMessage('取得に失敗しました');
+      console.error(e);
+    } finally {
+      setFetchFromGoogleLoading(false);
     }
   };
 
@@ -288,6 +332,28 @@ export default function HomePage() {
     setPopupReviews([]);
   };
 
+  /** 口コミをGoogleで開く（個別口コミのURLを優先してダイレクトで開く） */
+  const openReviewOnGoogle = async (review: Review) => {
+    const isPlaceUrl = (s: string) => /place_id=|maps\.google.*\/place\//.test(s) || /place\/\?q=place_id/.test(s);
+    if (review.reviewUrl && !isPlaceUrl(review.reviewUrl)) {
+      window.open(review.reviewUrl, '_blank');
+      return;
+    }
+    try {
+      const params = new URLSearchParams();
+      params.set('storeId', review.storeId);
+      if (review.authorName) params.set('authorName', review.authorName);
+      if (review.createdAt) params.set('createdAt', review.createdAt);
+      const res = await fetch(`/api/review-url?${params}`);
+      const data = (await res.json()) as { url?: string | null };
+      const url = data?.url ?? review.reviewUrl;
+      if (url) window.open(url, '_blank');
+      else if (review.reviewUrl) window.open(review.reviewUrl, '_blank');
+    } catch {
+      if (review.reviewUrl) window.open(review.reviewUrl, '_blank');
+    }
+  };
+
   const loading = activeTab === 'dashboard' ? dashboardLoading : reviewsLoading;
   const data = activeTab === 'dashboard' ? dashboardData : null;
 
@@ -298,6 +364,8 @@ export default function HomePage() {
         stores={stores}
         selectedStores={selectedStores}
         setSelectedStores={setSelectedStores}
+        selectedBrand={selectedBrand}
+        setSelectedBrand={setSelectedBrand}
         dateRange={dateRange}
         setDateRange={setDateRange}
         granularity={granularity}
@@ -305,6 +373,9 @@ export default function HomePage() {
         sortBy={sortBy}
         setSortBy={setSortBy}
         onRefresh={handleRefresh}
+        onFetchFromGoogle={handleFetchFromGoogle}
+        fetchFromGoogleLoading={fetchFromGoogleLoading}
+        fetchFromGoogleMessage={fetchFromGoogleMessage}
         loading={loading}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -351,7 +422,7 @@ export default function HomePage() {
                   {/* Store Comparison */}
                   <div className="bg-white rounded-lg shadow p-6 mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      店舗別比較
+                      評価別
                     </h3>
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
@@ -389,14 +460,20 @@ export default function HomePage() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {(() => {
-                            const maxByRating = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as const;
-                            data.storeComparison.forEach((store) => {
+                            const order = sortStoresByRegion([...data.stores]).map((s) => s.id);
+                            const orderedComparison = [...data.storeComparison].sort((a, b) => {
+                              const ai = order.indexOf(a.storeId);
+                              const bi = order.indexOf(b.storeId);
+                              return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                            });
+                            const maxByRating: { [k: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+                            orderedComparison.forEach((store) => {
                               ([5, 4, 3, 2, 1] as const).forEach((r) => {
                                 if (store.ratingCounts[r] > maxByRating[r]) maxByRating[r] = store.ratingCounts[r];
                               });
                             });
                             const greenBg = (count: number, max: number) => {
-                              if (max === 0) return { backgroundColor: 'transparent', color: undefined };
+                              if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
                               const t = Math.min(1, count / max);
                               const r = Math.round(240 - t * 219);
                               const g = Math.round(253 - t * 125);
@@ -407,7 +484,7 @@ export default function HomePage() {
                                 color: t >= 0.55 ? '#fff' : undefined
                               };
                             };
-                            return data.storeComparison.map((store) => (
+                            return orderedComparison.map((store) => (
                               <tr key={store.storeId} className="hover:bg-gray-50/80">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                   {store.storeName}
@@ -434,6 +511,95 @@ export default function HomePage() {
                       </table>
                     </div>
                   </div>
+
+                  {/* Store by Period Table */}
+                  {data.storeByPeriod && data.storeByPeriod.periodKeys.length > 0 && (
+                    <div className="bg-white rounded-lg shadow p-6 mb-8">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        期間別
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200" style={{ width: 'max-content' }}>
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-10">
+                                店舗名
+                              </th>
+                              {data.storeByPeriod.periodKeys.map((key) => {
+                                const date = new Date(key);
+                                const label =
+                                  granularity === 'MONTH'
+                                    ? `${date.getMonth() + 1}月`
+                                    : `${date.getMonth() + 1}/${date.getDate()}`;
+                                return (
+                                  <th
+                                    key={key}
+                                    className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                                  >
+                                    {label}
+                                  </th>
+                                );
+                              })}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {(() => {
+                              const order = sortStoresByRegion(
+                                data.storeByPeriod!.rows.map((r) => ({ id: r.storeId, name: r.storeName }))
+                              ).map((s) => s.id);
+                              const ordered = [...data.storeByPeriod!.rows].sort((a, b) => {
+                                const ai = order.indexOf(a.storeId);
+                                const bi = order.indexOf(b.storeId);
+                                return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                              });
+                              const maxByPeriod: Record<string, number> = {};
+                              data.storeByPeriod!.periodKeys.forEach((key) => {
+                                let max = 0;
+                                ordered.forEach((row) => {
+                                  const v = row.counts[key] ?? 0;
+                                  if (v > max) max = v;
+                                });
+                                maxByPeriod[key] = max;
+                              });
+                              const greenBg = (count: number, max: number) => {
+                                if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
+                                const t = Math.min(1, count / max);
+                                const r = Math.round(240 - t * 219);
+                                const g = Math.round(253 - t * 125);
+                                const b = Math.round(244 - t * 183);
+                                const bg = `rgb(${r},${g},${b})`;
+                                return {
+                                  backgroundColor: bg,
+                                  color: t >= 0.55 ? '#fff' : undefined
+                                };
+                              };
+                              return ordered.map((row) => (
+                                <tr key={row.storeId} className="hover:bg-gray-50/80">
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-100">
+                                    {row.storeName}
+                                  </td>
+                                  {data.storeByPeriod!.periodKeys.map((key) => {
+                                    const count = row.counts[key] ?? 0;
+                                    const max = maxByPeriod[key] ?? 0;
+                                    const style = greenBg(count, max);
+                                    return (
+                                      <td
+                                        key={key}
+                                        className="px-3 py-3 whitespace-nowrap text-sm text-center transition-colors"
+                                        style={style}
+                                      >
+                                        {count.toLocaleString()}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Time Series Chart */}
                   <div className="bg-white rounded-lg shadow p-6">
@@ -555,15 +721,13 @@ export default function HomePage() {
                               </div>
                             </div>
 
-                            {review.reviewUrl && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(review.reviewUrl, '_blank')}
-                              >
-                                Googleで見る
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openReviewOnGoogle(review)}
+                            >
+                              Googleで見る
+                            </Button>
                           </div>
 
                           {review.text && (
@@ -677,16 +841,14 @@ export default function HomePage() {
                         <span>{review.authorName || '匿名'}</span>
                         <span>•</span>
                         <span>{formatDate(review.createdAt)}</span>
-                        {review.reviewUrl && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="ml-auto"
-                            onClick={() => window.open(review.reviewUrl, '_blank')}
-                          >
-                            Googleで見る
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto"
+                          onClick={() => openReviewOnGoogle(review)}
+                        >
+                          Googleで見る
+                        </Button>
                       </div>
                       {review.text && (
                         <p className="text-gray-700 leading-relaxed">{review.text}</p>

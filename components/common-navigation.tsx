@@ -8,14 +8,21 @@ interface Store {
   name: string;
 }
 
+export type BrandFilter = 'all' | 'AMEMOBA' | 'SAKUMOBA';
+
 interface CommonNavigationProps {
   stores: Store[];
   selectedStores: string[];
   setSelectedStores: (stores: string[]) => void;
+  selectedBrand?: BrandFilter;
+  setSelectedBrand?: (brand: BrandFilter) => void;
   dateRange: { start: string; end: string };
   setDateRange: (range: { start: string; end: string }) => void;
   loading?: boolean;
   onRefresh?: () => void;
+  onFetchFromGoogle?: () => void | Promise<void>;
+  fetchFromGoogleLoading?: boolean;
+  fetchFromGoogleMessage?: string | null;
   // Dashboard specific props
   granularity?: 'DAY' | 'WEEK' | 'MONTH';
   setGranularity?: (granularity: 'DAY' | 'WEEK' | 'MONTH') => void;
@@ -29,14 +36,43 @@ interface CommonNavigationProps {
   setActiveTab?: (tab: 'dashboard' | 'reviews') => void;
 }
 
+function storeDisplayName(name: string): string {
+  if (name.startsWith('アメモバ買取 ')) return name.replace('アメモバ買取 ', '');
+  if (name.startsWith('サクモバ ')) return name.replace('サクモバ ', '');
+  return name;
+}
+
+function storeButtonLabel(name: string): string {
+  if (name.startsWith('アメモバ')) return `Am ${storeDisplayName(name)}`;
+  if (name.startsWith('サクモバ')) return `Sk ${storeDisplayName(name)}`;
+  return storeDisplayName(name);
+}
+
+function storeBorderClass(name: string): string {
+  if (name.startsWith('アメモバ')) return 'border-2 border-green-500';
+  if (name.startsWith('サクモバ')) return 'border-2 border-orange-500';
+  return 'border border-gray-300';
+}
+
+function storeActiveBgClass(name: string): string {
+  if (name.startsWith('アメモバ')) return 'bg-green-500 text-white';
+  if (name.startsWith('サクモバ')) return 'bg-orange-500 text-white';
+  return 'bg-blue-500 text-white';
+}
+
 export default function CommonNavigation({
   stores,
   selectedStores,
   setSelectedStores,
+  selectedBrand = 'all',
+  setSelectedBrand,
   dateRange,
   setDateRange,
   loading = false,
   onRefresh,
+  onFetchFromGoogle,
+  fetchFromGoogleLoading = false,
+  fetchFromGoogleMessage,
   granularity,
   setGranularity,
   sortBy,
@@ -52,10 +88,36 @@ export default function CommonNavigation({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo/Title */}
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
               <h1 className="text-xl font-bold text-gray-900">
                 アメモバ Google口コミモニター
               </h1>
+              {/* Brand buttons */}
+              {setSelectedBrand && (
+                <div className="flex items-center gap-1">
+                  {(['all', 'AMEMOBA', 'SAKUMOBA'] as const).map((brand) => (
+                    <button
+                      key={brand}
+                      type="button"
+                      onClick={() => {
+                        setSelectedBrand(brand);
+                        setSelectedStores(['all']);
+                      }}
+                      className={`px-2 py-1 text-xs rounded border transition-colors ${
+                        selectedBrand === brand
+                          ? brand === 'all'
+                            ? 'bg-gray-600 text-white border-gray-600'
+                            : brand === 'AMEMOBA'
+                              ? 'bg-green-500 text-white border-green-500'
+                              : 'bg-orange-500 text-white border-orange-500'
+                          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {brand === 'all' ? 'すべて' : brand === 'AMEMOBA' ? 'Am' : 'Sk'}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Tab Navigation */}
@@ -92,10 +154,10 @@ export default function CommonNavigation({
         <div className="max-w-7xl mx-auto p-4">
           {/* Store Filter Buttons */}
           <div className="mb-4">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={() => setSelectedStores(['all'])}
-                className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                className={`px-2 py-1 text-xs rounded transition-colors ${
                   selectedStores.includes('all') 
                     ? 'bg-blue-500 text-white' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -126,13 +188,13 @@ export default function CommonNavigation({
                       }
                     }
                   }}
-                  className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                  className={`px-2 py-1 text-xs rounded transition-colors ${storeBorderClass(store.name)} ${
                     selectedStores.includes(store.id) && !selectedStores.includes('all')
-                      ? 'bg-blue-500 text-white' 
+                      ? storeActiveBgClass(store.name)
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {store.name.replace('アメモバ買取 ', '')}
+                  {storeButtonLabel(store.name)}
                 </button>
               ))}
             </div>
@@ -188,6 +250,20 @@ export default function CommonNavigation({
               <Button onClick={onRefresh} disabled={loading}>
                 {loading ? '更新中...' : '更新'}
               </Button>
+            )}
+            {/* 口コミをGoogleから取得 */}
+            {onFetchFromGoogle && (
+              <Button
+                onClick={onFetchFromGoogle}
+                disabled={fetchFromGoogleLoading}
+                variant="outline"
+                className="border-green-600 text-green-700 hover:bg-green-50"
+              >
+                {fetchFromGoogleLoading ? '取得中...' : '口コミデータを再取得'}
+              </Button>
+            )}
+            {fetchFromGoogleMessage && (
+              <span className="text-sm text-gray-600">{fetchFromGoogleMessage}</span>
             )}
           </div>
         </div>

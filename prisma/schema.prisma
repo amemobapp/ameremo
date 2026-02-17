@@ -13,6 +13,7 @@ datasource db {
 model Store {
   id              String    @id @default(cuid())
   name            String
+  brand           String    @default("AMEMOBA") // AMEMOBA / SAKUMOBA
   type            String    @default("DIRECT") // DIRECT/FRANCHISE/UNKNOWN
   googleMapsUrl   String?
   placeId         String?

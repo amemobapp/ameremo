@@ -12,8 +12,20 @@
 
 
 ## ブランド：サクモバ
+
+| 店舗名 | Place ID | Google Maps URL |
+|---|---|---|
+| サクモバ 東京秋葉原店 | ChIJiS1phZ6PGGARWW9Q51UQcRk | https://maps.app.goo.gl/5syqmR83eYHR1Sy77 |
+| サクモバ 新宿西口店 | ChIJy97SMKGNGGARHCW4cTVFLtw | https://maps.app.goo.gl/T3ua72862GeWfFdJ6 |
+| サクモバ 名古屋大須店 | ChIJdfabEGd3A2ARPStzxMd5OJE | https://maps.app.goo.gl/CgynoAtxgwVYP3UR9 |
+
+────────────────────
+以下GoogleMapリンク（参考）
 サクモバ 東京秋葉原店
 https://maps.app.goo.gl/5syqmR83eYHR1Sy77
 
 サクモバ 新宿西口店
 https://maps.app.goo.gl/T3ua72862GeWfFdJ6
+
+サクモバ 名古屋大須店
+https://maps.app.goo.gl/CgynoAtxgwVYP3UR9

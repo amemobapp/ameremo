@@ -30,14 +30,17 @@ export function getStarRating(rating: number): string {
 }
 
 export function sortStoresByRegion(stores: Array<{ name: string; id: string }>): Array<{ name: string; id: string }> {
-  // Define the order: Tokyo → Chiba → Kansai
+  // Define the order: Amemoba (Tokyo → Chiba → Nagoya), then Sakumoba
   const regionOrder = [
     'アメモバ買取 東京上野本店',
-    'アメモバ買取 秋葉原店', 
+    'アメモバ買取 秋葉原店',
     'アメモバ買取 新宿東南口店',
     'アメモバ買取 柏店',
     'アメモバ買取 大宮マルイ店',
-    'アメモバ買取 名古屋大須店'
+    'アメモバ買取 名古屋大須店',
+    'サクモバ 東京秋葉原店',
+    'サクモバ 新宿西口店',
+    'サクモバ 名古屋大須店'
   ];
 
   return stores.sort((a, b) => {

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const storeIds = searchParams.get('storeIds')?.split(',').filter(Boolean);
+    const brand = searchParams.get('brand'); // 'all' | 'AMEMOBA' | 'SAKUMOBA'
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const granularity = searchParams.get('granularity') || 'DAY';
 
-    console.log('Dashboard API called with:', { storeIds, startDate, endDate, granularity });
+    console.log('Dashboard API called with:', { storeIds, brand, startDate, endDate, granularity });
 
     // Build where clause
     const where: any = {};
@@ -32,14 +35,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (storeIds && storeIds.length > 0 && !storeIds.includes('all')) {
-      where.storeId = {
-        in: storeIds
-      };
-    }
-
-    // Get all stores for filtering options
+    // Get all stores for filtering options (optionally by brand)
+    const storeWhere = brand && brand !== 'all' ? { brand } : {};
     const stores = await prisma.store.findMany({
+      where: storeWhere,
       select: {
         id: true,
         name: true
@@ -48,6 +47,14 @@ export async function GET(request: NextRequest) {
         name: 'asc'
       }
     });
+
+    // Limit reviews to selected store IDs, or to brand's stores when brand is set
+    if (storeIds && storeIds.length > 0 && !storeIds.includes('all')) {
+      where.storeId = { in: storeIds };
+    } else if (brand && brand !== 'all' && stores.length > 0) {
+      // Brand selected and "all stores" → limit to that brand's store IDs
+      where.storeId = { in: stores.map((s) => s.id) };
+    }
 
     // Get review counts and average ratings
     const reviews = await prisma.review.findMany({
@@ -116,6 +123,62 @@ export async function GET(request: NextRequest) {
 
     timeSeriesData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    // Build list of all period keys in range (for 店舗別期間別 table)
+    const periodKeys: string[] = [];
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      if (granularity === 'DAY') {
+        for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          periodKeys.push(d.toISOString().split('T')[0]);
+        }
+      } else if (granularity === 'WEEK') {
+        const cur = new Date(start);
+        cur.setDate(cur.getDate() - cur.getDay() + (cur.getDay() === 0 ? -6 : 1));
+        while (cur <= end) {
+          periodKeys.push(cur.toISOString().split('T')[0]);
+          cur.setDate(cur.getDate() + 7);
+        }
+      } else {
+        const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+        while (cur <= end) {
+          periodKeys.push(cur.toISOString().split('T')[0]);
+          cur.setMonth(cur.getMonth() + 1);
+        }
+      }
+    }
+    // Count by store and period (same key logic as timeSeriesData)
+    const storePeriodCounts = new Map<string, Map<string, number>>();
+    stores.forEach((s) => storePeriodCounts.set(s.id, new Map()));
+    reviews.forEach((review) => {
+      const date = new Date(review.createdAt);
+      let key: string;
+      switch (granularity) {
+        case 'WEEK': {
+          const monday = new Date(date);
+          monday.setDate(date.getDate() - date.getDay() + (date.getDay() === 0 ? -6 : 1));
+          key = monday.toISOString().split('T')[0];
+          break;
+        }
+        case 'MONTH':
+          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+          break;
+        default:
+          key = date.toISOString().split('T')[0];
+      }
+      const storeId = review.store.id;
+      const perStore = storePeriodCounts.get(storeId);
+      if (perStore) {
+        perStore.set(key, (perStore.get(key) ?? 0) + 1);
+      }
+    });
+    const storeByPeriod = stores.map((s) => ({
+      storeId: s.id,
+      storeName: s.name,
+      counts: Object.fromEntries(periodKeys.map((p) => [p, storePeriodCounts.get(s.id)?.get(p) ?? 0]))
+    }));
+
     // Get store comparison data with rating counts
     const storeComparison = await prisma.review.groupBy({
       by: ['storeId', 'rating'],
@@ -176,11 +239,8 @@ export async function GET(request: NextRequest) {
         averageRating: Math.round(averageRating * 10) / 10
       },
       timeSeriesData,
-      storeComparison: storeComparisonData.sort((a, b) => {
-        const aTotal = Object.values(a.ratingCounts).reduce((sum, count) => sum + count, 0);
-        const bTotal = Object.values(b.ratingCounts).reduce((sum, count) => sum + count, 0);
-        return bTotal - aTotal;
-      }),
+      storeComparison: storeComparisonData,
+      storeByPeriod: { periodKeys, rows: storeByPeriod },
       stores
     });
 

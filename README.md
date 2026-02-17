@@ -47,6 +47,9 @@ GOOGLE_PLACES_API_KEY=your_google_places_api_key
 
 # Database URL（本番は Vercel Postgres の接続文字列を設定）
 DATABASE_URL="postgresql://user:password@host:5432/dbname?sslmode=require"
+
+# Site Password (for login protection)
+SITE_PASSWORD=your_password_here
 ```
 
 ### 3. データベースのセットアップ
@@ -78,7 +81,10 @@ npm run dev
 3. **GOOGLE_PLACES_API_KEY**  
    **Settings → Environment Variables** で `GOOGLE_PLACES_API_KEY` を追加し、Google Cloud の API キーを設定。
 
-4. **初回デプロイ後**  
+4. **SITE_PASSWORD**  
+   **Settings → Environment Variables** で `SITE_PASSWORD` を追加し、サイト保護用のパスワードを設定（例: `ameyoko`）。Production、Preview、Development すべての環境に設定してください。
+
+5. **初回デプロイ後**  
    デプロイが完了したら、Vercel の **Settings → Environment Variables** で本番の `DATABASE_URL` をコピーし、ローカルの `.env.local` にも同じ値を入れてから、以下でマイグレーションを実行（本番 DB にテーブルを作成）：
    ```bash
    npm run db:push
