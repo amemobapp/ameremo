@@ -606,10 +606,10 @@ function HomePageContent() {
                               const bi = order.indexOf(b.storeId);
                               return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
                             });
-                            const maxByRating: { [k: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+                            let maxTable = 0;
                             orderedComparison.forEach((store) => {
                               ([5, 4, 3, 2, 1] as const).forEach((r) => {
-                                if (store.ratingCounts[r] > maxByRating[r]) maxByRating[r] = store.ratingCounts[r];
+                                if (store.ratingCounts[r] > maxTable) maxTable = store.ratingCounts[r];
                               });
                             });
                             const countBg = (count: number, max: number) => {
@@ -631,8 +631,7 @@ function HomePageContent() {
                                 </td>
                                 {([5, 4, 3, 2, 1] as const).map((rating) => {
                                   const count = store.ratingCounts[rating];
-                                  const max = maxByRating[rating];
-const style = countBg(count, max);
+                                  const style = countBg(count, maxTable);
                                     return (
                                     <td
                                       key={rating}
@@ -692,14 +691,12 @@ const style = countBg(count, max);
                                 const bi = order.indexOf(b.storeId);
                                 return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
                               });
-                              const maxByPeriod: Record<string, number> = {};
-                              data.storeByPeriod!.periodKeys.forEach((key) => {
-                                let max = 0;
-                                ordered.forEach((row) => {
+                              let maxTable = 0;
+                              ordered.forEach((row) => {
+                                data.storeByPeriod!.periodKeys.forEach((key) => {
                                   const v = row.counts[key] ?? 0;
-                                  if (v > max) max = v;
+                                  if (v > maxTable) maxTable = v;
                                 });
-                                maxByPeriod[key] = max;
                               });
                               const countBg = (count: number, max: number) => {
                                 if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
@@ -720,8 +717,7 @@ const style = countBg(count, max);
                                   </td>
                                   {data.storeByPeriod!.periodKeys.map((key) => {
                                     const count = row.counts[key] ?? 0;
-                                    const max = maxByPeriod[key] ?? 0;
-                                    const style = countBg(count, max);
+                                    const style = countBg(count, maxTable);
                                     return (
                                       <td
                                         key={key}
