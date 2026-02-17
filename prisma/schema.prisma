@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Store {
+  id              String    @id @default(cuid())
+  name            String
+  type            String    @default("DIRECT") // DIRECT/FRANCHISE/UNKNOWN
+  googleMapsUrl   String?
+  placeId         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  reviews         Review[]
+  reviewAggregates ReviewAggregate[]
+
+  @@map("stores")
+}
+
+model Review {
+  id             String     @id @default(cuid())
+  storeId        String
+  source         String     @default("GOOGLE") // GOOGLE
+  sourceReviewId String     @unique
+  rating         Int        // 1-5
+  text           String?
+  authorName     String?
+  createdAt      DateTime   // 投稿日
+  fetchedAt      DateTime   @default(now()) // 取得日時
+  reviewUrl      String?
+  rawPayload     String?    // JSON as string
+  
+  store          Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model ReviewAggregate {
+  id              String   @id @default(cuid())
+  storeId         String
+  granularity     String   // DAY/WEEK/MONTH
+  bucketStartDate DateTime
+  reviewCount     Int      @default(0)
+  ratingAvg       Float    @default(0)
+  updatedAt       DateTime @updatedAt
+  
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, granularity, bucketStartDate])
+  @@map("review_aggregates")
+}
+
+model FetchLog {
+  id          String   @id @default(cuid())
+  storeId     String?
+  status      String   // SUCCESS/ERROR
+  message     String?
+  reviewCount Int      @default(0)
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  @@map("fetch_logs")
+}
