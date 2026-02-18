@@ -149,7 +149,7 @@ export class GooglePlacesService {
         }
       }
       if (!reviewsV1.length && !reviewsLegacy.length) {
-        const place = await this.findPlace(storeName) ?? await this.findPlace(`アメモバ買取 ${storeName}`);
+        const place = await this.findPlace(storeName) ?? await this.findPlace(`アメモバ ${storeName}`);
         if (place?.reviews?.length) return place.reviews;
         return [];
       }

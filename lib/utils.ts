@@ -29,6 +29,30 @@ export function getStarRating(rating: number): string {
   return '⭐'.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '⭐' : '');
 }
 
+const PREFIX_AMEMOBA = 'アメモバ ';
+const PREFIX_SAKUMOBA = 'サクモバ ';
+
+/** フル店舗名から「店名部分」のみを取り出す（ブランド名を除く）。DBの name の一部であり、Am/Sk は含まない。 */
+export function getStoreNamePart(name: string): string {
+  if (name.startsWith(PREFIX_AMEMOBA)) return name.slice(PREFIX_AMEMOBA.length);
+  if (name.startsWith(PREFIX_SAKUMOBA)) return name.slice(PREFIX_SAKUMOBA.length);
+  return name;
+}
+
+/** ブランド用プレフィックス（Am / Sk）。店名の一部ではなく、ボタン・テーブルでブランドを示すために付ける。 */
+function getBrandPrefix(name: string): string {
+  if (name.startsWith('アメモバ')) return 'Am ';
+  if (name.startsWith('サクモバ')) return 'Sk ';
+  return '';
+}
+
+/** ボタン・テーブル用の表示名。「Am 上野本店」形式。Am/Sk はブランドに対するプレフィックスであり店名の一部ではない。 */
+export function formatStoreNameShort(name: string): string {
+  const prefix = getBrandPrefix(name);
+  const storeNamePart = getStoreNamePart(name);
+  return prefix ? `${prefix}${storeNamePart}` : name;
+}
+
 /** ブランド順（アメモバ→サクモバ）、続けて地域順で店舗を並べる */
 export function sortStoresByRegion(stores: Array<{ name: string; id: string }>): Array<{ name: string; id: string }> {
   const brandOrder = (name: string) => {

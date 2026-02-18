@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { formatDate, getRelativeTime, getStarRating, sortStoresByRegion } from '@/lib/utils';
+import { formatDate, formatStoreNameShort, getRelativeTime, getStarRating, sortStoresByRegion } from '@/lib/utils';
 import {
   STORE_SLUG_TO_NAME,
   STORE_NAME_TO_SLUG,
@@ -82,6 +82,18 @@ interface ReviewsResponse {
 
 type TabType = 'dashboard' | 'reviews';
 
+/** 評価別テーブル用：SVGの星の中に数字を表示 */
+function StarWithNumber({ n }: { n: number }) {
+  return (
+    <svg viewBox="0 0 24 24" className="w-7 h-7 sm:w-8 sm:h-8 inline-block" aria-label={`${n}つ星`}>
+      <polygon points="12,2 15,9 22,9 17,14 19,22 12,18 5,22 7,14 2,9 9,9" className="fill-amber-500" />
+      <text x="12" y="17.5" textAnchor="middle" className="fill-white text-[10px] sm:text-xs font-bold" style={{ fontFamily: 'system-ui, sans-serif' }}>
+        {n}
+      </text>
+    </svg>
+  );
+}
+
 function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -101,6 +113,7 @@ function HomePageContent() {
   const [selectedStores, setSelectedStores] = useState<string[]>(['all']);
   const [initialStoreSlug, setInitialStoreSlug] = useState<string | null>(null);
   const hasReadUrlRef = useRef(false);
+  const periodTableScrollRef = useRef<HTMLDivElement>(null);
   const [dateRange, setDateRange] = useState({
     start: '',
     end: ''
@@ -179,15 +192,12 @@ function HomePageContent() {
     fetchStores();
   }, []);
 
-  // Calculate header height dynamically
+  // Calculate header height dynamically (single fixed header block)
   useEffect(() => {
     const updateHeaderHeight = () => {
-      const headerElement = document.querySelector('header');
       const controlsElement = document.getElementById('navigation-controls');
-      if (headerElement && controlsElement) {
-        const headerHeight = headerElement.offsetHeight;
-        const controlsHeight = controlsElement.offsetHeight;
-        setHeaderHeight(headerHeight + controlsHeight + 16); // Add 16px for extra spacing
+      if (controlsElement) {
+        setHeaderHeight(controlsElement.offsetHeight + 16);
       }
     };
 
@@ -218,6 +228,17 @@ function HomePageContent() {
   useEffect(() => {
     fetchStores();
   }, [selectedBrand]);
+
+  // Period table: default scroll to rightmost so latest period is visible; shadow on fixed column shows more data to the left
+  useEffect(() => {
+    if (!dashboardData?.storeByPeriod?.periodKeys?.length || !periodTableScrollRef.current) return;
+    const el = periodTableScrollRef.current;
+    const scrollToEnd = () => {
+      el.scrollLeft = el.scrollWidth - el.clientWidth;
+    };
+    const t = setTimeout(scrollToEnd, 0);
+    return () => clearTimeout(t);
+  }, [dashboardData?.storeByPeriod?.periodKeys?.length]);
 
   // Fetch stores for navigation (filtered by brand)
   const fetchStores = async () => {
@@ -450,52 +471,49 @@ function HomePageContent() {
 
       {/* Main Content with padding for fixed navigation */}
       <div style={{ paddingTop: `${headerHeight}px` }}>
-        <div className="max-w-7xl mx-auto px-8 pb-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20">
           {/* Dashboard Tab Content */}
           {activeTab === 'dashboard' && (
             <>
               {loading || !data ? (
-                <div className="text-center">Loading...</div>
+                <div className="text-center py-12 sm:py-16 text-gray-600">Loading...</div>
               ) : (
                 <>
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-white rounded-lg shadow p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        口コミ投稿件数
+                  {/* Summary Cards - 常に横並び・縦コンパクト */}
+                  <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-4 sm:mb-6">
+                    <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5">
+                        指定期間口コミ件数
                       </h3>
-                      <p className="text-3xl font-bold text-blue-600">
+                      <p className="text-2xl sm:text-4xl font-bold text-blue-600 leading-tight">
                         {data.summary.totalReviews.toLocaleString()}件
                       </p>
-                      <p className="text-sm text-gray-600 mt-2">
-                        期間内の総投稿件数
-                      </p>
-                      <p className="text-xs text-amber-600 mt-1">
-                        ※取得は店舗・期間ごとに最新5件までです。
+                      <p className="text-[10px] sm:text-xs text-amber-600 mt-1 font-annotation">
+                        現在は直近の分のみ取得しています。
                       </p>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5">
                         平均評価
                       </h3>
-                      <p className="text-3xl font-bold text-green-600">
+                      <p className="text-2xl sm:text-4xl font-bold text-green-600 leading-tight">
                         {getStarRating(data.summary.averageRating)} {data.summary.averageRating.toFixed(1)}
                       </p>
-                      <p className="text-sm text-gray-600 mt-2">
+                      <p className="text-xs text-gray-600 mt-1 font-annotation">
                         期間内の平均星評価
                       </p>
                     </div>
                   </div>
 
-                  {/* Time Series Chart */}
-                  <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {/* Time Series Chart - responsive height and padding, less horizontal margin on mobile */}
+                  <div className="bg-white rounded-lg shadow px-2 py-4 sm:p-6 mb-6 sm:mb-8">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
                       時系列推移
                     </h3>
-                    <div className="h-80">
+                    <div className="h-72 sm:h-96 lg:h-[28rem] min-h-[280px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={data.timeSeriesData}>
+                        <ComposedChart data={data.timeSeriesData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis 
                             dataKey="date" 
@@ -514,7 +532,13 @@ function HomePageContent() {
                             }}
                           />
                           <YAxis yAxisId="left" orientation="left" stroke="#3B82F6" />
-                          <YAxis yAxisId="right" orientation="right" stroke="#10B981" />
+                          <YAxis
+                            yAxisId="right"
+                            orientation="right"
+                            stroke="#10B981"
+                            domain={[0, 6]}
+                            ticks={[0, 1, 2, 3, 4, 5]}
+                          />
                           <Tooltip 
                             labelFormatter={(value) => formatDate(value)}
                             formatter={(value: any, name: string) => {
@@ -528,11 +552,12 @@ function HomePageContent() {
                             }}
                           />
                           <Legend 
-                            formatter={(value) => {
-                              if (value === 'reviewCount') return '口コミ件数';
-                              if (value === 'averageRating') return '平均評価';
-                              return value;
-                            }}
+                            content={() => (
+                              <div className="flex items-center justify-center gap-4 text-xs sm:text-sm mt-1 font-annotation">
+                                <span><span className="text-[1em] align-middle" style={{ color: '#3B82F6' }}>■</span>口コミ件数</span>
+                                <span><span className="text-[1em] align-middle" style={{ color: '#10B981' }}>●</span>平均評価</span>
+                              </div>
+                            )}
                           />
                           <Bar 
                             yAxisId="left" 
@@ -553,115 +578,19 @@ function HomePageContent() {
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="mt-4 text-sm text-gray-600">
-                      <p>• 青色の棒グラフ：口コミ投稿件数</p>
-                      <p>• 緑色の折れ線グラフ：平均星評価</p>
-                    </div>
                   </div>
 
-                  {/* Store Comparison */}
-                  <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      評価別
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              店舗
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐⭐⭐⭐</span>
-                              <br />
-                              <span className="text-xs">5</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐⭐⭐</span>
-                              <br />
-                              <span className="text-xs">4</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐⭐</span>
-                              <br />
-                              <span className="text-xs">3</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐⭐</span>
-                              <br />
-                              <span className="text-xs">2</span>
-                            </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <span className="text-lg">⭐</span>
-                              <br />
-                              <span className="text-xs">1</span>
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {(() => {
-                            const order = sortStoresByRegion([...data.stores]).map((s) => s.id);
-                            const orderedComparison = [...data.storeComparison].sort((a, b) => {
-                              const ai = order.indexOf(a.storeId);
-                              const bi = order.indexOf(b.storeId);
-                              return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-                            });
-                            let maxTable = 0;
-                            orderedComparison.forEach((store) => {
-                              ([5, 4, 3, 2, 1] as const).forEach((r) => {
-                                if (store.ratingCounts[r] > maxTable) maxTable = store.ratingCounts[r];
-                              });
-                            });
-                            const countBg = (count: number, max: number) => {
-                              if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
-                              const t = Math.min(1, count / max);
-                              const r = Math.round(240 - t * 203);
-                              const g = Math.round(253 - t * 154);
-                              const b = Math.round(244 - t * 9);
-                              const bg = `rgb(${r},${g},${b})`;
-                              return {
-                                backgroundColor: bg,
-                                color: t >= 0.5 ? '#fff' : undefined
-                              };
-                            };
-                            return orderedComparison.map((store) => (
-                              <tr key={store.storeId} className="hover:bg-gray-50/80">
-                                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${getStoreNameCellClass(store.storeName)}`}>
-                                  {store.storeName}
-                                </td>
-                                {([5, 4, 3, 2, 1] as const).map((rating) => {
-                                  const count = store.ratingCounts[rating];
-                                  const style = countBg(count, maxTable);
-                                    return (
-                                    <td
-                                      key={rating}
-                                      className="px-6 py-4 whitespace-nowrap text-sm text-center cursor-pointer transition-colors"
-                                      style={style}
-                                      onClick={() => count > 0 && openReviewPopup(store.storeId, store.storeName, rating)}
-                                    >
-                                      {count.toLocaleString()}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ));
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Store by Period Table */}
+                  {/* Store by Period Table - horizontal scroll, sticky first column */}
                   {data.storeByPeriod && data.storeByPeriod.periodKeys.length > 0 && (
-                    <div className="bg-white rounded-lg shadow p-6 mb-8">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6 sm:mb-8 overflow-hidden">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
                         期間別
                       </h3>
-                      <div className="overflow-x-auto">
+                      <div ref={periodTableScrollRef} className="overflow-x-auto -mx-2 sm:mx-0">
                         <table className="min-w-full divide-y divide-gray-200" style={{ width: 'max-content' }}>
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-10">
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-10 border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.12)] font-store-name">
                                 店舗名
                               </th>
                               {data.storeByPeriod.periodKeys.map((key) => {
@@ -673,7 +602,7 @@ function HomePageContent() {
                                 return (
                                   <th
                                     key={key}
-                                    className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                                    className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                                   >
                                     {label}
                                   </th>
@@ -712,8 +641,8 @@ function HomePageContent() {
                               };
                               return ordered.map((row) => (
                                 <tr key={row.storeId} className="hover:bg-gray-50/80">
-                                  <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium sticky left-0 bg-white z-10 border-r border-gray-100 ${getStoreNameCellClass(row.storeName)}`}>
-                                    {row.storeName}
+                                  <td className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium sticky left-0 bg-white z-10 border-r border-gray-100 max-w-[100px] sm:max-w-none truncate shadow-[4px_0_10px_rgba(0,0,0,0.12)] font-store-name ${getStoreNameCellClass(row.storeName)}`} title={row.storeName}>
+                                    {formatStoreNameShort(row.storeName)}
                                   </td>
                                   {data.storeByPeriod!.periodKeys.map((key) => {
                                     const count = row.counts[key] ?? 0;
@@ -721,7 +650,7 @@ function HomePageContent() {
                                     return (
                                       <td
                                         key={key}
-                                        className="px-3 py-3 whitespace-nowrap text-sm text-center transition-colors"
+                                        className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-center transition-colors"
                                         style={style}
                                       >
                                         {count.toLocaleString()}
@@ -736,6 +665,88 @@ function HomePageContent() {
                       </div>
                     </div>
                   )}
+
+                  {/* Store Comparison - horizontal scroll on small, smaller cell padding */}
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6 sm:mb-8 overflow-hidden">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
+                      評価別
+                    </h3>
+                    <div className="overflow-x-auto -mx-2 sm:mx-0">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap font-store-name">
+                              店舗
+                            </th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <StarWithNumber n={5} />
+                            </th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <StarWithNumber n={4} />
+                            </th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <StarWithNumber n={3} />
+                            </th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <StarWithNumber n={2} />
+                            </th>
+                            <th className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <StarWithNumber n={1} />
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {(() => {
+                            const order = sortStoresByRegion([...data.stores]).map((s) => s.id);
+                            const orderedComparison = [...data.storeComparison].sort((a, b) => {
+                              const ai = order.indexOf(a.storeId);
+                              const bi = order.indexOf(b.storeId);
+                              return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                            });
+                            let maxTable = 0;
+                            orderedComparison.forEach((store) => {
+                              ([5, 4, 3, 2, 1] as const).forEach((r) => {
+                                if (store.ratingCounts[r] > maxTable) maxTable = store.ratingCounts[r];
+                              });
+                            });
+                            const countBg = (count: number, max: number) => {
+                              if (count === 0 || max === 0) return { backgroundColor: '#ffffff', color: undefined };
+                              const t = Math.min(1, count / max);
+                              const r = Math.round(240 - t * 203);
+                              const g = Math.round(253 - t * 154);
+                              const b = Math.round(244 - t * 9);
+                              const bg = `rgb(${r},${g},${b})`;
+                              return {
+                                backgroundColor: bg,
+                                color: t >= 0.5 ? '#fff' : undefined
+                              };
+                            };
+                            return orderedComparison.map((store) => (
+                              <tr key={store.storeId} className="hover:bg-gray-50/80">
+                                <td className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium max-w-[120px] sm:max-w-none truncate font-store-name ${getStoreNameCellClass(store.storeName)}`} title={store.storeName}>
+                                  {formatStoreNameShort(store.storeName)}
+                                </td>
+                                {([5, 4, 3, 2, 1] as const).map((rating) => {
+                                  const count = store.ratingCounts[rating];
+                                  const style = countBg(count, maxTable);
+                                    return (
+                                    <td
+                                      key={rating}
+                                      className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-center cursor-pointer transition-colors"
+                                      style={style}
+                                      onClick={() => count > 0 && openReviewPopup(store.storeId, store.storeName, rating)}
+                                    >
+                                      {count.toLocaleString()}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </>
               )}
             </>
@@ -747,13 +758,13 @@ function HomePageContent() {
               {/* Reviews List */}
               <div className="bg-white rounded-lg shadow">
                 {loading && !reviewsData ? (
-                  <div className="p-12 text-center">
+                  <div className="p-8 sm:p-12 text-center">
                     <p className="text-gray-600">Loading...</p>
                   </div>
                 ) : reviewsData && reviewsData.reviews.length > 0 ? (
                   <>
-                    <div className="p-6 border-b border-gray-200">
-                      <p className="text-sm text-gray-600">
+                    <div className="p-4 sm:p-6 border-b border-gray-200">
+                      <p className="text-xs sm:text-sm text-gray-600 font-annotation">
                         全 {reviewsData.pagination.totalCount.toLocaleString()} 件中 
                         {((currentPage - 1) * reviewsData.pagination.limit) + 1} - 
                         {Math.min(currentPage * reviewsData.pagination.limit, reviewsData.pagination.totalCount)} 件を表示
@@ -762,22 +773,22 @@ function HomePageContent() {
 
                     <div className="divide-y divide-gray-200">
                       {reviewsData.reviews.map((review) => (
-                        <div key={review.id} className="p-6 hover:bg-gray-50">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="font-semibold text-gray-900">
+                        <div key={review.id} className="p-4 sm:p-6 hover:bg-gray-50">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base break-words">
                                   {review.store.name}
                                 </h3>
-                                <span className="text-lg">
+                                <span className="text-base sm:text-lg shrink-0">
                                   {getStarRating(review.rating)}
                                 </span>
-                                <span className="text-sm text-gray-600">
+                                <span className="text-xs sm:text-sm text-gray-600 font-annotation">
                                   {review.rating}.0
                                 </span>
                               </div>
                               
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-0 text-xs sm:text-sm text-gray-600 mb-2 font-annotation">
                                 <span>{review.authorName || '匿名'}</span>
                                 <span>•</span>
                                 <span>{formatDate(review.createdAt)}</span>
@@ -790,13 +801,14 @@ function HomePageContent() {
                               variant="outline"
                               size="sm"
                               onClick={() => openReviewOnGoogle(review)}
+                              className="shrink-0 w-full sm:w-auto"
                             >
                               Googleで見る
                             </Button>
                           </div>
 
                           {review.text && (
-                            <div className="text-gray-700 leading-relaxed">
+                            <div className="text-sm sm:text-base text-gray-700 leading-relaxed break-words">
                               {review.text}
                             </div>
                           )}
@@ -804,17 +816,19 @@ function HomePageContent() {
                       ))}
                     </div>
 
-                    {/* Pagination */}
+                    {/* Pagination - wrap on small screens */}
                     {reviewsData.pagination.totalPages > 1 && (
-                      <div className="p-6 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-gray-600">
+                      <div className="p-4 sm:p-6 border-t border-gray-200">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                          <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left font-annotation">
                             ページ {currentPage} / {reviewsData.pagination.totalPages}
                           </div>
                           
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
                             <Button
                               variant="outline"
+                              size="sm"
+                              className="min-w-[2.25rem] sm:min-w-0"
                               onClick={() => handlePageChange(currentPage - 1)}
                               disabled={currentPage === 1}
                             >
@@ -838,6 +852,8 @@ function HomePageContent() {
                                 <Button
                                   key={pageNum}
                                   variant={currentPage === pageNum ? 'default' : 'outline'}
+                                  size="sm"
+                                  className="min-w-[2.25rem] sm:min-w-0"
                                   onClick={() => handlePageChange(pageNum)}
                                 >
                                   {pageNum}
@@ -847,6 +863,8 @@ function HomePageContent() {
                             
                             <Button
                               variant="outline"
+                              size="sm"
+                              className="min-w-[2.25rem] sm:min-w-0"
                               onClick={() => handlePageChange(currentPage + 1)}
                               disabled={currentPage === reviewsData.pagination.totalPages}
                             >
@@ -858,8 +876,8 @@ function HomePageContent() {
                     )}
                   </>
                 ) : (
-                  <div className="p-12 text-center">
-                    <p className="text-gray-600">
+                  <div className="p-8 sm:p-12 text-center">
+                    <p className="text-sm sm:text-base text-gray-600 font-annotation">
                       指定された条件に一致する口コミが見つかりませんでした。
                     </p>
                   </div>
@@ -870,30 +888,30 @@ function HomePageContent() {
         </div>
       </div>
 
-      {/* Review popup modal */}
+      {/* Review popup modal - responsive padding and text */}
       {reviewPopup && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/50 overflow-y-auto"
           onClick={closeReviewPopup}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col"
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] sm:max-h-[80vh] flex flex-col my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <div className="flex items-center justify-between gap-2 p-3 sm:p-4 border-b border-gray-200 shrink-0">
+              <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate min-w-0">
                 {reviewPopup.storeName} — {getStarRating(reviewPopup.rating)} の口コミ
               </h3>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 p-1"
+                className="text-gray-400 hover:text-gray-600 p-1 shrink-0 touch-manipulation"
                 onClick={closeReviewPopup}
                 aria-label="閉じる"
               >
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 min-h-0">
               {popupLoading ? (
                 <p className="text-gray-500 text-center py-8">読み込み中...</p>
               ) : popupReviews.length === 0 ? (
@@ -902,21 +920,23 @@ function HomePageContent() {
                 <ul className="space-y-4">
                   {popupReviews.map((review) => (
                     <li key={review.id} className="border-b border-gray-100 pb-4 last:border-0">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                        <span>{review.authorName || '匿名'}</span>
-                        <span>•</span>
-                        <span>{formatDate(review.createdAt)}</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-gray-600 mb-2 font-annotation">
+                        <span className="flex flex-wrap gap-x-2">
+                          <span>{review.authorName || '匿名'}</span>
+                          <span>•</span>
+                          <span>{formatDate(review.createdAt)}</span>
+                        </span>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="ml-auto"
+                          className="w-full sm:w-auto sm:ml-auto shrink-0"
                           onClick={() => openReviewOnGoogle(review)}
                         >
                           Googleで見る
                         </Button>
                       </div>
                       {review.text && (
-                        <p className="text-gray-700 leading-relaxed">{review.text}</p>
+                        <p className="text-sm sm:text-base text-gray-700 leading-relaxed break-words">{review.text}</p>
                       )}
                     </li>
                   ))}

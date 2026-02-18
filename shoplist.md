@@ -2,12 +2,12 @@
 
 | 店舗名 | Place ID | Google Maps URL |
 |---|---|---|
-| アメモバ買取 上野店 | ChIJG_0V74WNGGARNcOjkwixJuQ | https://www.google.com/maps/place/?q=place_id:ChIJG_0V74WNGGARNcOjkwixJuQ |
-| アメモバ買取 秋葉原店 | ChIJFQAwsZ-OGGARfGHc4VvmyLA | https://www.google.com/maps/place/?q=place_id:ChIJFQAwsZ-OGGARfGHc4VvmyLA |
-| アメモバ買取 柏店 | ChIJhyb1RRmdGGARKhISBfOIFhI | https://www.google.com/maps/place/?q=place_id:ChIJhyb1RRmdGGARKhISBfOIFhI |
-| アメモバ買取 名古屋大須店 | ChIJHYp3Shd3A2ARONqCexsG5ew | https://www.google.com/maps/place/?q=place_id:ChIJHYp3Shd3A2ARONqCexsG5ew |
-| アメモバ買取 新宿東南口店 | ChIJM_kPEBiNGGAR1jbcaf_pwpo | https://www.google.com/maps/place/?q=place_id:ChIJM_kPEBiNGGAR1jbcaf_pwpo |
-| アメモバ買取 大宮マルイ店 | ChIJn-qyhX6dGGARAFfE-Mv4UOU | https://www.google.com/maps/place/?q=place_id:ChIJn-qyhX6dGGARAFfE-Mv4UOU |
+| アメモバ 上野本店 | ChIJG_0V74WNGGARNcOjkwixJuQ | https://www.google.com/maps/place/?q=place_id:ChIJG_0V74WNGGARNcOjkwixJuQ |
+| アメモバ 秋葉原店 | ChIJFQAwsZ-OGGARfGHc4VvmyLA | https://www.google.com/maps/place/?q=place_id:ChIJFQAwsZ-OGGARfGHc4VvmyLA |
+| アメモバ 柏店 | ChIJhyb1RRmdGGARKhISBfOIFhI | https://www.google.com/maps/place/?q=place_id:ChIJhyb1RRmdGGARKhISBfOIFhI |
+| アメモバ 名古屋大須店 | ChIJHYp3Shd3A2ARONqCexsG5ew | https://www.google.com/maps/place/?q=place_id:ChIJHYp3Shd3A2ARONqCexsG5ew |
+| アメモバ 新宿東南口店 | ChIJM_kPEBiNGGAR1jbcaf_pwpo | https://www.google.com/maps/place/?q=place_id:ChIJM_kPEBiNGGAR1jbcaf_pwpo |
+| アメモバ 大宮マルイ店 | ChIJn-qyhX6dGGARAFfE-Mv4UOU | https://www.google.com/maps/place/?q=place_id:ChIJn-qyhX6dGGARAFfE-Mv4UOU |
 
 
 
@@ -48,12 +48,12 @@ https://maps.app.goo.gl/CgynoAtxgwVYP3UR9
 
 | パラメータ | 店舗 |
 |-----------|------|
-| `store=ame-ueno` | アメモバ買取 上野店 |
-| `store=ame-akiba` | アメモバ買取 秋葉原店 |
-| `store=ame-kashiwa` | アメモバ買取 柏店 |
-| `store=ame-nagoya` | アメモバ買取 名古屋大須店 |
-| `store=ame-shinjuku` | アメモバ買取 新宿東南口店 |
-| `store=ame-omiya` | アメモバ買取 大宮マルイ店 |
+| `store=ame-ueno` | アメモバ 上野本店 |
+| `store=ame-akiba` | アメモバ 秋葉原店 |
+| `store=ame-kashiwa` | アメモバ 柏店 |
+| `store=ame-nagoya` | アメモバ 名古屋大須店 |
+| `store=ame-shinjuku` | アメモバ 新宿東南口店 |
+| `store=ame-omiya` | アメモバ 大宮マルイ店 |
 | `store=saku-akiba` | サクモバ 秋葉原店 |
 | `store=saku-shinjuku` | サクモバ 新宿西口店 |
 | `store=saku-nagoya` | サクモバ 名古屋大須店 |

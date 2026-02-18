@@ -55,5 +55,29 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-glowsans), ui-sans-serif, system-ui, sans-serif;
   }
+}
+
+/* サイト全体: GlowSansSC Compressed Medium（body で指定） */
+
+/* 注釈・補足テキスト用: GlowSansSC Compressed Light */
+.font-annotation {
+  font-family: var(--font-glowsans-light), var(--font-glowsans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* テーブルの店名セル（Medium を明示） */
+.font-store-name {
+  font-family: var(--font-glowsans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Recharts: chart stretches to same width as wrapper */
+.recharts-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.recharts-wrapper svg {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible;
 }

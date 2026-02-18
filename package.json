@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "seed-stores": "tsx scripts/seed-stores.ts",
+    "update-store-names": "tsx scripts/update-store-names.ts",
     "fetch-reviews": "tsx scripts/fetch-reviews.ts"
   },
   "dependencies": {

@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { APP_VERSION } from '@/lib/version';
 
 export default function Header() {
   const pathname = usePathname();
@@ -12,9 +13,10 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo/Title */}
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900">
-              アメモバ Google口コミモニター
-            </h1>
+            <Link href="/" className="inline-flex items-start gap-1.5 hover:opacity-80 transition-opacity group" aria-label="アメレモ トップへ">
+              <h1 className="text-xl font-bold text-gray-900 leading-tight">アメレモ</h1>
+              <span className="inline-flex items-center justify-center text-[11px] font-medium px-1 py-0.5 rounded bg-gray-200 text-gray-600 group-hover:bg-gray-300 leading-none mt-0.5" aria-label={`バージョン ${APP_VERSION}`}>v{APP_VERSION}</span>
+            </Link>
           </div>
 
           {/* Navigation */}
@@ -27,7 +29,7 @@ export default function Header() {
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              ダッシュボード
+              集計
             </Link>
             <Link
               href="/reviews"

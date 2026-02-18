@@ -102,7 +102,7 @@ export class GoogleScraperService {
         storeName,
         `${storeName} 口コミ`,
         `${storeName} 評判`,
-        `アメモバ買取 ${storeName.split(' ').pop()}`
+        `アメモバ ${storeName.split(' ').pop()}`
       ];
       
       let allReviews: ScrapedReview[] = [];

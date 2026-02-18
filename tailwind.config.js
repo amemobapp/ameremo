@@ -7,6 +7,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-glowsans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        annotation: ['var(--font-glowsans-light)', 'var(--font-glowsans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

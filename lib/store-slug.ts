@@ -3,12 +3,12 @@
  */
 
 export const STORE_SLUG_TO_NAME: Record<string, string> = {
-  'ame-ueno': 'アメモバ買取 上野店',
-  'ame-akiba': 'アメモバ買取 秋葉原店',
-  'ame-kashiwa': 'アメモバ買取 柏店',
-  'ame-nagoya': 'アメモバ買取 名古屋大須店',
-  'ame-shinjuku': 'アメモバ買取 新宿東南口店',
-  'ame-omiya': 'アメモバ買取 大宮マルイ店',
+  'ame-ueno': 'アメモバ 上野本店',
+  'ame-akiba': 'アメモバ 秋葉原店',
+  'ame-kashiwa': 'アメモバ 柏店',
+  'ame-nagoya': 'アメモバ 名古屋大須店',
+  'ame-shinjuku': 'アメモバ 新宿東南口店',
+  'ame-omiya': 'アメモバ 大宮マルイ店',
   'saku-akiba': 'サクモバ 秋葉原店',
   'saku-shinjuku': 'サクモバ 新宿西口店',
   'saku-nagoya': 'サクモバ 名古屋大須店',
