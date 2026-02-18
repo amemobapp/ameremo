@@ -287,7 +287,13 @@ export default function CommonNavigation({
                     aria-expanded={storeModalOpen}
                     aria-haspopup="true"
                   >
-                    <span className="truncate min-w-0">店舗を選択</span>
+                    <span className="truncate min-w-0">
+                      {selectedStores.includes('all') || selectedStores.length === 0
+                        ? '店舗を選択'
+                        : selectedStores.length === 1
+                          ? storeButtonLabel(stores.find((s) => s.id === selectedStores[0])?.name ?? '店舗')
+                          : `店舗（${selectedStores.length}件）`}
+                    </span>
                     <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-500" />
                   </button>
                 </div>
