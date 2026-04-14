@@ -32,21 +32,21 @@ export function getStarRating(rating: number): string {
 const PREFIX_AMEMOBA = 'アメモバ ';
 const PREFIX_SAKUMOBA = 'サクモバ ';
 
-/** フル店舗名から「店名部分」のみを取り出す（ブランド名を除く）。DBの name の一部であり、Am/Sk は含まない。 */
+/** フル店舗名から「店名部分」のみを取り出す（ブランド名を除く）。DBの name の一部であり、Ⓐ/Ⓢ は含まない。 */
 export function getStoreNamePart(name: string): string {
   if (name.startsWith(PREFIX_AMEMOBA)) return name.slice(PREFIX_AMEMOBA.length);
   if (name.startsWith(PREFIX_SAKUMOBA)) return name.slice(PREFIX_SAKUMOBA.length);
   return name;
 }
 
-/** ブランド用プレフィックス（Am / Sk）。店名の一部ではなく、ボタン・テーブルでブランドを示すために付ける。 */
+/** ブランド用プレフィックス（Ⓐ / Ⓢ）。店名の一部ではなく、ボタン・テーブルでブランドを示すために付ける。 */
 function getBrandPrefix(name: string): string {
-  if (name.startsWith('アメモバ')) return 'Am ';
-  if (name.startsWith('サクモバ')) return 'Sk ';
+  if (name.startsWith('アメモバ')) return 'Ⓐ';
+  if (name.startsWith('サクモバ')) return 'Ⓢ';
   return '';
 }
 
-/** ボタン・テーブル用の表示名。「Am 上野本店」形式。Am/Sk はブランドに対するプレフィックスであり店名の一部ではない。 */
+/** ボタン・テーブル用の表示名。「Ⓐ上野本店」形式。Ⓐ/Ⓢ はブランドに対するプレフィックスであり店名の一部ではない。 */
 export function formatStoreNameShort(name: string): string {
   const prefix = getBrandPrefix(name);
   const storeNamePart = getStoreNamePart(name);

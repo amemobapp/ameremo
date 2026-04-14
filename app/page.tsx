@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatStoreNameShort, getRelativeTime, getStarRating, sortStoresByRegion } from '@/lib/utils';
 import {
@@ -29,6 +29,7 @@ import {
 interface Store {
   id: string;
   name: string;
+  googleMapsUrl?: string | null;
 }
 
 interface DashboardData {
@@ -44,6 +45,7 @@ interface DashboardData {
   storeComparison: Array<{
     storeId: string;
     storeName: string;
+    googleMapsUrl?: string | null;
     ratingCounts: {
       1: number;
       2: number;
@@ -54,7 +56,7 @@ interface DashboardData {
   }>;
   storeByPeriod?: {
     periodKeys: string[];
-    rows: Array<{ storeId: string; storeName: string; counts: Record<string, number> }>;
+    rows: Array<{ storeId: string; storeName: string; googleMapsUrl?: string | null; counts: Record<string, number> }>;
   };
   stores: Store[];
 }
@@ -81,6 +83,7 @@ interface ReviewsResponse {
 }
 
 type TabType = 'dashboard' | 'reviews';
+type TotalSortOrder = 'asc' | 'desc' | null;
 
 /** 評価別テーブル用：SVGの星の中に数字を表示 */
 function StarWithNumber({ n }: { n: number }) {
@@ -97,7 +100,8 @@ function StarWithNumber({ n }: { n: number }) {
 function HomePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const pathname = usePathname();
+  const activeTab: TabType = pathname === '/reviews' ? 'reviews' : 'dashboard';
   
   // Dashboard state
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -131,6 +135,10 @@ function HomePageContent() {
   const [popupLoading, setPopupLoading] = useState(false);
   const [fetchFromGoogleLoading, setFetchFromGoogleLoading] = useState(false);
   const [fetchFromGoogleMessage, setFetchFromGoogleMessage] = useState<string | null>(null);
+  const [periodStoreSortOrder, setPeriodStoreSortOrder] = useState<TotalSortOrder>(null);
+  const [periodTotalSortOrder, setPeriodTotalSortOrder] = useState<TotalSortOrder>(null);
+  const [ratingStoreSortOrder, setRatingStoreSortOrder] = useState<TotalSortOrder>(null);
+  const [ratingTotalSortOrder, setRatingTotalSortOrder] = useState<TotalSortOrder>(null);
 
   // Read URL params once on mount and set brand / pending store slug
   useEffect(() => {
@@ -390,6 +398,22 @@ function HomePageContent() {
     return base + 'text-gray-900 ' + extra;
   };
 
+  const renderStoreNameLink = (name: string, googleMapsUrl?: string | null) => {
+    const label = formatStoreNameShort(name);
+    if (!googleMapsUrl) return label;
+    return (
+      <a
+        href={googleMapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline decoration-transparent hover:decoration-current"
+        title={`${name} を Google Map で開く`}
+      >
+        {label}
+      </a>
+    );
+  };
+
   const openReviewPopup = async (storeId: string, storeName: string, rating: number) => {
     setReviewPopup({ storeId, storeName, rating });
     setPopupLoading(true);
@@ -443,6 +467,14 @@ function HomePageContent() {
 
   const loading = activeTab === 'dashboard' ? dashboardLoading : reviewsLoading;
   const data = activeTab === 'dashboard' ? dashboardData : null;
+  const isSingleStoreSelected = selectedStores.length === 1 && !selectedStores.includes('all');
+  const selectedStoreId = isSingleStoreSelected ? selectedStores[0] : null;
+  const handleTabChange = (tab: TabType) => {
+    const targetPath = tab === 'dashboard' ? '/' : '/reviews';
+    const qs = searchParams.toString();
+    const targetUrl = qs ? `${targetPath}?${qs}` : targetPath;
+    router.push(targetUrl);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -465,7 +497,7 @@ function HomePageContent() {
         fetchFromGoogleMessage={fetchFromGoogleMessage}
         loading={loading}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         singleSelection={true}
       />
 
@@ -590,8 +622,35 @@ function HomePageContent() {
                         <table className="min-w-full divide-y divide-gray-200" style={{ width: 'max-content' }}>
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-10 border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.12)] font-store-name">
-                                店舗名
+                              <th className="w-[7.5rem] min-w-[7.5rem] px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-20 border-r border-gray-100 font-store-name">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-start gap-1 w-full"
+                                  onClick={() => {
+                                    setPeriodStoreSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                                    setPeriodTotalSortOrder(null);
+                                  }}
+                                >
+                                  <span>店舗</span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {periodStoreSortOrder === 'asc' ? '▲' : periodStoreSortOrder === 'desc' ? '▼' : '↕'}
+                                  </span>
+                                </button>
+                              </th>
+                              <th className="w-[5.5rem] min-w-[5.5rem] px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-[7.5rem] bg-gray-50 z-20 border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.12)]">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-1 w-full"
+                                  onClick={() => {
+                                    setPeriodTotalSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                                    setPeriodStoreSortOrder(null);
+                                  }}
+                                >
+                                  <span>合計件数</span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {periodTotalSortOrder === 'asc' ? '▲' : periodTotalSortOrder === 'desc' ? '▼' : '↕'}
+                                  </span>
+                                </button>
                               </th>
                               {data.storeByPeriod.periodKeys.map((key) => {
                                 const date = new Date(key);
@@ -612,12 +671,33 @@ function HomePageContent() {
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {(() => {
-                              const order = sortStoresByRegion(
-                                data.storeByPeriod!.rows.map((r) => ({ id: r.storeId, name: r.storeName }))
+                              const periodRows = isSingleStoreSelected && selectedStoreId
+                                ? data.storeByPeriod!.rows.filter((r) => r.storeId === selectedStoreId)
+                                : data.storeByPeriod!.rows;
+                              const regionOrder = sortStoresByRegion(
+                                periodRows.map((r) => ({ id: r.storeId, name: r.storeName }))
                               ).map((s) => s.id);
-                              const ordered = [...data.storeByPeriod!.rows].sort((a, b) => {
-                                const ai = order.indexOf(a.storeId);
-                                const bi = order.indexOf(b.storeId);
+                              const periodRowsWithTotal = periodRows.map((row) => ({
+                                ...row,
+                                totalCount: data.storeByPeriod!.periodKeys.reduce(
+                                  (sum, key) => sum + (row.counts[key] ?? 0),
+                                  0
+                                )
+                              }));
+                              const ordered = [...periodRowsWithTotal].sort((a, b) => {
+                                if (periodStoreSortOrder) {
+                                  const diff = formatStoreNameShort(a.storeName).localeCompare(
+                                    formatStoreNameShort(b.storeName),
+                                    'ja'
+                                  );
+                                  if (diff !== 0) return periodStoreSortOrder === 'asc' ? diff : -diff;
+                                }
+                                if (periodTotalSortOrder) {
+                                  const diff = a.totalCount - b.totalCount;
+                                  if (diff !== 0) return periodTotalSortOrder === 'asc' ? diff : -diff;
+                                }
+                                const ai = regionOrder.indexOf(a.storeId);
+                                const bi = regionOrder.indexOf(b.storeId);
                                 return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
                               });
                               let maxTable = 0;
@@ -641,8 +721,11 @@ function HomePageContent() {
                               };
                               return ordered.map((row) => (
                                 <tr key={row.storeId} className="hover:bg-gray-50/80">
-                                  <td className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium sticky left-0 bg-white z-10 border-r border-gray-100 max-w-[100px] sm:max-w-none truncate shadow-[4px_0_10px_rgba(0,0,0,0.12)] font-store-name ${getStoreNameCellClass(row.storeName)}`} title={row.storeName}>
-                                    {formatStoreNameShort(row.storeName)}
+                                  <td className={`w-[7.5rem] min-w-[7.5rem] px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium sticky left-0 bg-white z-20 border-r border-gray-100 truncate font-store-name ${getStoreNameCellClass(row.storeName)}`} title={row.storeName}>
+                                    {renderStoreNameLink(row.storeName, row.googleMapsUrl)}
+                                  </td>
+                                  <td className="w-[5.5rem] min-w-[5.5rem] px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-center font-medium sticky left-[7.5rem] bg-white z-20 border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.12)]">
+                                    {row.totalCount.toLocaleString()}
                                   </td>
                                   {data.storeByPeriod!.periodKeys.map((key) => {
                                     const count = row.counts[key] ?? 0;
@@ -675,8 +758,35 @@ function HomePageContent() {
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap font-store-name">
-                              店舗
+                            <th className="w-[7.5rem] min-w-[7.5rem] px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-0 bg-gray-50 z-20 border-r border-gray-100 font-store-name">
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-start gap-1 w-full"
+                                onClick={() => {
+                                  setRatingStoreSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                                  setRatingTotalSortOrder(null);
+                                }}
+                              >
+                                <span>店舗</span>
+                                <span className="text-[10px] text-gray-400">
+                                  {ratingStoreSortOrder === 'asc' ? '▲' : ratingStoreSortOrder === 'desc' ? '▼' : '↕'}
+                                </span>
+                              </button>
+                            </th>
+                            <th className="w-[5.5rem] min-w-[5.5rem] px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky left-[7.5rem] bg-gray-50 z-20 border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.12)]">
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center gap-1 w-full"
+                                onClick={() => {
+                                  setRatingTotalSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                                  setRatingStoreSortOrder(null);
+                                }}
+                              >
+                                <span>合計件数</span>
+                                <span className="text-[10px] text-gray-400">
+                                  {ratingTotalSortOrder === 'asc' ? '▲' : ratingTotalSortOrder === 'desc' ? '▼' : '↕'}
+                                </span>
+                              </button>
                             </th>
                             <th className="px-2 sm:px-3 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                               <StarWithNumber n={5} />
@@ -697,10 +807,32 @@ function HomePageContent() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {(() => {
-                            const order = sortStoresByRegion([...data.stores]).map((s) => s.id);
-                            const orderedComparison = [...data.storeComparison].sort((a, b) => {
-                              const ai = order.indexOf(a.storeId);
-                              const bi = order.indexOf(b.storeId);
+                            const comparisonRows = isSingleStoreSelected && selectedStoreId
+                              ? data.storeComparison.filter((s) => s.storeId === selectedStoreId)
+                              : data.storeComparison;
+                            const storesForOrder = isSingleStoreSelected && selectedStoreId
+                              ? data.stores.filter((s) => s.id === selectedStoreId)
+                              : data.stores;
+                            const regionOrder = sortStoresByRegion([...storesForOrder]).map((s) => s.id);
+                            const comparisonRowsWithTotal = comparisonRows.map((store) => ({
+                              ...store,
+                              totalCount: ([5, 4, 3, 2, 1] as const)
+                                .reduce((sum, rating) => sum + store.ratingCounts[rating], 0)
+                            }));
+                            const orderedComparison = [...comparisonRowsWithTotal].sort((a, b) => {
+                              if (ratingStoreSortOrder) {
+                                const diff = formatStoreNameShort(a.storeName).localeCompare(
+                                  formatStoreNameShort(b.storeName),
+                                  'ja'
+                                );
+                                if (diff !== 0) return ratingStoreSortOrder === 'asc' ? diff : -diff;
+                              }
+                              if (ratingTotalSortOrder) {
+                                const diff = a.totalCount - b.totalCount;
+                                if (diff !== 0) return ratingTotalSortOrder === 'asc' ? diff : -diff;
+                              }
+                              const ai = regionOrder.indexOf(a.storeId);
+                              const bi = regionOrder.indexOf(b.storeId);
                               return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
                             });
                             let maxTable = 0;
@@ -723,8 +855,11 @@ function HomePageContent() {
                             };
                             return orderedComparison.map((store) => (
                               <tr key={store.storeId} className="hover:bg-gray-50/80">
-                                <td className={`px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium max-w-[120px] sm:max-w-none truncate font-store-name ${getStoreNameCellClass(store.storeName)}`} title={store.storeName}>
-                                  {formatStoreNameShort(store.storeName)}
+                                <td className={`w-[7.5rem] min-w-[7.5rem] px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium sticky left-0 bg-white z-20 border-r border-gray-100 truncate font-store-name ${getStoreNameCellClass(store.storeName)}`} title={store.storeName}>
+                                  {renderStoreNameLink(store.storeName, store.googleMapsUrl)}
+                                </td>
+                                <td className="w-[5.5rem] min-w-[5.5rem] px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-center font-medium sticky left-[7.5rem] bg-white z-20 border-r border-gray-100 shadow-[4px_0_10px_rgba(0,0,0,0.12)]">
+                                  {store.totalCount.toLocaleString()}
                                 </td>
                                 {([5, 4, 3, 2, 1] as const).map((rating) => {
                                   const count = store.ratingCounts[rating];

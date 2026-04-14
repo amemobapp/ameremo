@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
       where: storeWhere,
       select: {
         id: true,
-        name: true
+        name: true,
+        googleMapsUrl: true
       },
       orderBy: {
         name: 'asc'
@@ -176,6 +177,7 @@ export async function GET(request: NextRequest) {
     const storeByPeriod = stores.map((s) => ({
       storeId: s.id,
       storeName: s.name,
+      googleMapsUrl: s.googleMapsUrl,
       counts: Object.fromEntries(periodKeys.map((p) => [p, storePeriodCounts.get(s.id)?.get(p) ?? 0]))
     }));
 
@@ -192,24 +194,26 @@ export async function GET(request: NextRequest) {
     const uniqueStoreIds = Array.from(new Set(storeComparison.map(item => item.storeId)));
     
     // Fetch all stores at once to avoid N+1 problem
-    const storeMap = new Map<string, string>();
+    const storeMap = new Map<string, { name: string; googleMapsUrl: string | null }>();
     if (uniqueStoreIds.length > 0) {
       const storeRecords = await prisma.store.findMany({
         where: { id: { in: uniqueStoreIds } },
-        select: { id: true, name: true }
+        select: { id: true, name: true, googleMapsUrl: true }
       });
       storeRecords.forEach(store => {
-        storeMap.set(store.id, store.name);
+        storeMap.set(store.id, { name: store.name, googleMapsUrl: store.googleMapsUrl });
       });
     }
 
     // Group by store and count by rating
-    const storeRatingCounts = new Map<string, { storeName: string; ratingCounts: { [key: number]: number } }>();
+    const storeRatingCounts = new Map<string, { storeName: string; googleMapsUrl: string | null; ratingCounts: { [key: number]: number } }>();
     
     for (const item of storeComparison) {
       if (!storeRatingCounts.has(item.storeId)) {
+        const mapped = storeMap.get(item.storeId);
         storeRatingCounts.set(item.storeId, {
-          storeName: storeMap.get(item.storeId) || 'Unknown',
+          storeName: mapped?.name || 'Unknown',
+          googleMapsUrl: mapped?.googleMapsUrl ?? null,
           ratingCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
         });
       }
@@ -222,6 +226,7 @@ export async function GET(request: NextRequest) {
       if (!storeRatingCounts.has(store.id)) {
         storeRatingCounts.set(store.id, {
           storeName: store.name,
+          googleMapsUrl: store.googleMapsUrl,
           ratingCounts: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
         });
       }
@@ -230,6 +235,7 @@ export async function GET(request: NextRequest) {
     const storeComparisonData = Array.from(storeRatingCounts.entries()).map(([storeId, data]) => ({
       storeId,
       storeName: data.storeName,
+      googleMapsUrl: data.googleMapsUrl,
       ratingCounts: data.ratingCounts
     }));
 
