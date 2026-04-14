@@ -83,8 +83,16 @@ export default function CommonNavigation({
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           {/* Row 1: Title + Icon nav (集計 / 口コミ一覧 / フィルター) */}
           <div className="flex justify-between items-center py-3 min-h-[3rem]">
-            <Link href="/" className="inline-flex items-start gap-1.5 shrink-0 hover:opacity-80 transition-opacity group" aria-label="🍋アメレモン トップへ">
-              <h1 className="text-base sm:text-xl font-bold text-gray-900 leading-tight">🍋アメレモン</h1>
+            <Link href="/" className="inline-flex items-start gap-1.5 shrink-0 hover:opacity-80 transition-opacity group" aria-label="アメレモン トップへ">
+              <h1 className="inline-flex items-center gap-1.5 text-base sm:text-xl font-bold text-gray-900 leading-tight">
+                <img
+                  src="/icon.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-[1em] w-[1em] shrink-0"
+                />
+                <span>アメレモン</span>
+              </h1>
               <span className="inline-flex items-center justify-center text-[9px] sm:text-[11px] font-medium px-1 py-0.5 rounded bg-blue-500 text-white group-hover:bg-blue-600 leading-none mt-0.5" aria-label={`バージョン ${APP_VERSION}`}>v{APP_VERSION}</span>
             </Link>
             {setActiveTab && (

@@ -14,7 +14,7 @@ const glowSansLight = localFont({
 })
 
 export const metadata = {
-  title: '🍋アメレモン',
+  title: 'アメレモン',
   description: 'アメモバ各店舗のGoogle口コミをモニターするシステム',
 }
 

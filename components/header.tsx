@@ -13,8 +13,16 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo/Title */}
           <div className="flex items-center">
-            <Link href="/" className="inline-flex items-start gap-1.5 hover:opacity-80 transition-opacity group" aria-label="🍋アメレモン トップへ">
-              <h1 className="text-xl font-bold text-gray-900 leading-tight">🍋アメレモン</h1>
+            <Link href="/" className="inline-flex items-start gap-1.5 hover:opacity-80 transition-opacity group" aria-label="アメレモン トップへ">
+              <h1 className="inline-flex items-center gap-1.5 text-xl font-bold text-gray-900 leading-tight">
+                <img
+                  src="/icon.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-[1em] w-[1em] shrink-0"
+                />
+                <span>アメレモン</span>
+              </h1>
               <span className="inline-flex items-center justify-center text-[11px] font-medium px-1 py-0.5 rounded bg-blue-500 text-white group-hover:bg-blue-600 leading-none mt-0.5" aria-label={`バージョン ${APP_VERSION}`}>v{APP_VERSION}</span>
             </Link>
           </div>
