@@ -7,7 +7,7 @@ export const DEFAULT_STORES: Array<{ name: string; placeId: string; googleMapsUr
   { name: 'アメモバ 秋葉原店', placeId: 'ChIJFQAwsZ-OGGARfGHc4VvmyLA', googleMapsUrl: 'https://www.google.com/maps/place/?q=place_id:ChIJFQAwsZ-OGGARfGHc4VvmyLA', type: 'DIRECT', brand: 'AMEMOBA' },
   { name: 'アメモバ 柏店', placeId: 'ChIJhyb1RRmdGGARKhISBfOIFhI', googleMapsUrl: 'https://www.google.com/maps/place/?q=place_id:ChIJhyb1RRmdGGARKhISBfOIFhI', type: 'DIRECT', brand: 'AMEMOBA' },
   { name: 'アメモバ 名古屋大須店', placeId: 'ChIJHYp3Shd3A2ARONqCexsG5ew', googleMapsUrl: 'https://www.google.com/maps/place/?q=place_id:ChIJHYp3Shd3A2ARONqCexsG5ew', type: 'DIRECT', brand: 'AMEMOBA' },
-  { name: 'アメモバ 新宿東南口店', placeId: 'ChIJM_kPEBiNGGAR1jbcaf_pwpo', googleMapsUrl: 'https://www.google.com/maps/place/?q=place_id:ChIJM_kPEBiNGGAR1jbcaf_pwpo', type: 'DIRECT', brand: 'AMEMOBA' },
+  { name: 'アメモバ 新宿東南口店', placeId: 'ChIJa8SgWUWNGGARl2Fnx36y2JU', googleMapsUrl: 'https://www.google.com/maps/place/?q=place_id:ChIJa8SgWUWNGGARl2Fnx36y2JU', type: 'DIRECT', brand: 'AMEMOBA' },
   { name: 'アメモバ 大宮マルイ店', placeId: 'ChIJn-qyhX6dGGARAFfE-Mv4UOU', googleMapsUrl: 'https://www.google.com/maps/place/?q=place_id:ChIJn-qyhX6dGGARAFfE-Mv4UOU', type: 'DIRECT', brand: 'AMEMOBA' },
   { name: 'サクモバ 秋葉原店', placeId: 'ChIJiS1phZ6PGGARWW9Q51UQcRk', googleMapsUrl: 'https://maps.app.goo.gl/5syqmR83eYHR1Sy77', type: 'DIRECT', brand: 'SAKUMOBA' },
   { name: 'サクモバ 新宿西口店', placeId: 'ChIJy97SMKGNGGARHCW4cTVFLtw', googleMapsUrl: 'https://maps.app.goo.gl/T3ua72862GeWfFdJ6', type: 'DIRECT', brand: 'SAKUMOBA' },
