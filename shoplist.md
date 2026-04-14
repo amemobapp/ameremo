@@ -6,7 +6,7 @@
 | アメモバ 秋葉原店 | ChIJFQAwsZ-OGGARfGHc4VvmyLA | https://www.google.com/maps/place/?q=place_id:ChIJFQAwsZ-OGGARfGHc4VvmyLA |
 | アメモバ 柏店 | ChIJhyb1RRmdGGARKhISBfOIFhI | https://www.google.com/maps/place/?q=place_id:ChIJhyb1RRmdGGARKhISBfOIFhI |
 | アメモバ 名古屋大須店 | ChIJHYp3Shd3A2ARONqCexsG5ew | https://www.google.com/maps/place/?q=place_id:ChIJHYp3Shd3A2ARONqCexsG5ew |
-| アメモバ 新宿東南口店 | ChIJM_kPEBiNGGAR1jbcaf_pwpo | https://www.google.com/maps/place/?q=place_id:ChIJM_kPEBiNGGAR1jbcaf_pwpo |
+| アメモバ 新宿東南口店 | ChIJa8SgWUWNGGARl2Fnx36y2JU | https://www.google.com/maps/place/?q=place_id:ChIJa8SgWUWNGGARl2Fnx36y2JU |
 | アメモバ 大宮マルイ店 | ChIJn-qyhX6dGGARAFfE-Mv4UOU | https://www.google.com/maps/place/?q=place_id:ChIJn-qyhX6dGGARAFfE-Mv4UOU |
 
 
